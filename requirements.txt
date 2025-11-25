@@ -2,8 +2,9 @@ torch
 torchaudio
 numpy
 librosa
-datasets
+datasets==2.21.0
 tqdm
 matplotlib
 huggingface_hub
 chatterbox-tts
+soundfile

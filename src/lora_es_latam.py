@@ -635,7 +635,6 @@ def main():
     # Load Chatterbox model
     print("Loading Chatterbox TTS model...")
     model = ChatterboxTTS.from_pretrained(
-        repo_id="ResembleAI/chatterbox-multilingual",
         device=DEVICE,
     )
 

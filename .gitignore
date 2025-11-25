@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Training Artifacts
+checkpoints_lora/
+logs/
+training_metrics.png
+*.wav
+
+# Temporary build files
+pkuseg_tmp/
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/

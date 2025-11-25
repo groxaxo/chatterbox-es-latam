@@ -18,6 +18,15 @@ source venv/bin/activate
 # Install dependencies
 echo "Installing dependencies..."
 pip install --upgrade pip
+pip install numpy cython setuptools wheel soundfile
+# Fix pkuseg by building from source without pre-generated cpp files
+git clone https://github.com/lancopku/pkuseg-python.git pkuseg_tmp
+cd pkuseg_tmp
+find . -name "*.cpp" -delete
+find . -name "*.c" -delete
+pip install --no-build-isolation .
+cd ..
+rm -rf pkuseg_tmp
 pip install -r requirements.txt
 
 # Run training with logging

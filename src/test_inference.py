@@ -8,9 +8,10 @@ def main():
     print(f"Using device: {device}")
 
     # Load merged model
-    print("Loading merged model from ./checkpoints_lora/merged_model...")
+    model_path = "./checkpoints_lora/merged_model"
+    print(f"Loading merged model from {model_path}...")
     try:
-        model = ChatterboxTTS.from_local("./checkpoints_lora/merged_model", device=device)
+        model = ChatterboxTTS.from_local(ckpt_dir=model_path, device=device)
     except Exception as e:
         print(f"Error loading model: {e}")
         print("Please ensure the model has been trained and merged to './checkpoints_lora/merged_model'.")
