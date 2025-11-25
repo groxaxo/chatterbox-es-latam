@@ -485,7 +485,7 @@ def compute_loss(
     for t in text_tokens_list:
         pad_amount = max_text_len - t.size(-1)
         if pad_amount > 0:
-            padded = F.pad(t, (0, pad_amount), value=model.tokenizer.pad_token_id or 0)
+            padded = F.pad(t, (0, pad_amount), value=0)
         else:
             padded = t
         text_tokens_padded.append(padded)
