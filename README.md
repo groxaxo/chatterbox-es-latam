@@ -1,224 +1,149 @@
-# Chatterbox LoRA Fine-Tuning (Español Rioplatense)
+# Chatterbox ES-LATAM
 
-Este repositorio contiene todo lo necesario para realizar un fine-tuning (LoRA) del modelo **Chatterbox TTS** utilizando el dataset **Orpheus LATAM** (voces argentinas).
+<div align="center">
 
-El objetivo es adaptar el modelo multilingüe de Resemble AI para que genere audio con acento rioplatense natural.
+**Sistema de Text-to-Speech personalizado para español latinoamericano**
 
-## 📂 Estructura del Proyecto
+*Optimizado para aplicaciones de Comunicación Aumentativa Alternativa (AAC)*
+
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+</div>
+
+---
+
+## 🎯 Objetivo
+
+Permitir que personas con discapacidades del habla puedan comunicarse usando **su propia voz clonada**, con inferencia rápida en tablets Surface.
+
+## 🏗️ Arquitectura
+
+```
+┌─────────────────────────────────────┐
+│     SERVIDOR (GPU Potente)          │
+│  • Procesa audio del usuario        │
+│  • Genera Voice ID optimizado       │
+└──────────────────┬──────────────────┘
+                   │ Descarga
+                   ▼
+┌─────────────────────────────────────┐
+│     TABLET SURFACE                  │
+│  • Inferencia ONNX local            │
+│  • Reproducción rápida (<500ms)     │
+│  • Fallback a Web Speech API        │
+└─────────────────────────────────────┘
+```
+
+## 📁 Estructura del Proyecto
 
 ```
 chatterbox-es-latam/
-├── src/
-│   ├── lora_es_latam.py    # Script principal de entrenamiento
-│   ├── dataset_orpheus.py  # Procesamiento del dataset Orpheus
-│   └── test_inference.py   # Script para probar el modelo entrenado
-├── runpod_train.sh         # Script de automatización para RunPod
-├── fix_pkuseg.bat          # Script de corrección de instalación para Windows
-├── requirements.txt        # Dependencias del proyecto
-└── README.md               # Esta documentación
+├── docs/                    # 📚 Documentación completa
+├── server/                  # 🖥️ Servidor FastAPI (enrollment)
+├── training/                # 🎓 Scripts de fine-tuning LoRA
+├── client-sdk/              # 📱 SDK para tablets (ONNX) [WIP]
+├── client/                  # 🔧 Scripts de exportación ONNX
+└── web/                     # 🌐 Demo web
 ```
 
-## 🚀 Instalación Local (Windows)
+## 🚀 Quick Start
 
-### 1. Prerrequisitos
-- Python 3.10 o 3.11
-- GPU NVIDIA (Recomendado: 16GB+ VRAM para training, 8GB+ para inferencia)
-- [Git](https://git-scm.com/) instalado
-
-### 2. Configuración
-
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/franclarke/chatterbox-es-latam.git
-    cd chatterbox-es-latam
-    ```
-
-2.  **Crear entorno virtual:**
-    ```bash
-    python -m venv venv
-    .\venv\Scripts\activate
-    ```
-
-3.  **Instalar dependencias (IMPORTANTE):**
-    Debido a un problema de compatibilidad con la librería `pkuseg` en Windows, debés seguir este orden exacto:
-
-    ```cmd
-    # 1. Instalar herramientas base
-    pip install numpy cython setuptools wheel
-
-    # 2. Ejecutar el script de corrección (compila pkuseg localmente)
-    fix_pkuseg.bat
-
-    # 3. Instalar el resto de dependencias
-    pip install -r requirements.txt
-    ```
-
-4.  **Login en HuggingFace:**
-    Necesario para descargar el modelo base y el dataset.
-    ```bash
-    huggingface-cli login
-    ```
-
-## ☁️ Entrenamiento en RunPod
-
-Este repositorio está optimizado para correr en **RunPod** (pods con GPU NVIDIA, ej: A40, A6000, A100).
-
-1.  **Crear Pod:** Elegí una imagen base de PyTorch (ej: `runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04`).
-2.  **Subir código:** Podés clonar el repo o subir los archivos directamente.
-3.  **Ejecutar entrenamiento:**
-    Hemos preparado un script que instala todo, arregla dependencias y lanza el entrenamiento automáticamente.
-
-    ```bash
-    chmod +x runpod_train.sh
-    ./runpod_train.sh
-    ```
-
-    *Este script guardará los logs en `logs/train_log.txt` para que puedas cerrar la terminal sin detener el proceso.*
-
-## 🛠️ Uso
-
-### Entrenamiento (Fine-Tuning)
-Para iniciar el entrenamiento manualmente:
 ```bash
-python -m src.lora_es_latam
-```
-*Configuraciones como `BATCH_SIZE`, `EPOCHS`, `LEARNING_RATE` se pueden editar directamente en `src/lora_es_latam.py`.*
+# 1. Clonar e instalar
+git clone https://github.com/tu-usuario/chatterbox-es-latam.git
+cd chatterbox-es-latam
+pip install -r requirements.txt
 
-### Inferencia (Prueba)
-Una vez finalizado el entrenamiento, se generará la carpeta `checkpoints_lora/merged_model`. Para probarlo:
+# 2. Iniciar servidor
+cd server
+uvicorn main:app --reload --port 8000
 
-1.  Abrí `src/test_inference.py` y editá el texto si deseás.
-2.  Ejecutá:
-    ```bash
-    python src/test_inference.py
-    ```
-3.  El audio generado se guardará como `test_es_ar.wav`.
-
-# Chatterbox LoRA Fine-Tuning (Español Rioplatense)
-
-Este repositorio contiene todo lo necesario para realizar un fine-tuning (LoRA) del modelo **Chatterbox TTS** utilizando el dataset **Orpheus LATAM** (voces argentinas).
-
-El objetivo es adaptar el modelo multilingüe de Resemble AI para que genere audio con acento rioplatense natural.
-
-## 📂 Estructura del Proyecto
-
-```
-chatterbox-es-latam/
-├── src/
-│   ├── lora_es_latam.py    # Script principal de entrenamiento
-│   ├── dataset_orpheus.py  # Procesamiento del dataset Orpheus
-│   └── test_inference.py   # Script para probar el modelo entrenado
-├── runpod_train.sh         # Script de automatización para RunPod
-├── fix_pkuseg.bat          # Script de corrección de instalación para Windows
-├── requirements.txt        # Dependencias del proyecto
-└── README.md               # Esta documentación
+# 3. Probar API
+curl http://localhost:8000/health
 ```
 
-## 🚀 Instalación Local (Windows)
+Ver [documentación completa](./docs/README.md) para más detalles.
 
-### 1. Prerrequisitos
-- Python 3.10 o 3.11
-- GPU NVIDIA (Recomendado: 16GB+ VRAM para training, 8GB+ para inferencia)
-- [Git](https://git-scm.com/) instalado
+## 📖 Documentación
 
-### 2. Configuración
+| Documento | Descripción |
+|-----------|-------------|
+| [📋 Overview](./docs/README.md) | Introducción y visión general |
+| [🏗️ Arquitectura](./docs/ARCHITECTURE.md) | Diseño del sistema |
+| [💻 Hardware](./docs/HARDWARE.md) | Tablets soportadas |
+| [⚡ Quick Start](./docs/QUICKSTART.md) | Guía rápida |
+| [🖥️ Server API](./docs/server/API.md) | Referencia de endpoints |
+| [📱 Client SDK](./docs/client-sdk/README.md) | SDK para tablets |
+| [🔗 Integración SAI](./docs/integration/SAI.md) | Guía para app SAI |
+| [📅 Roadmap](./docs/ROADMAP.md) | Fases del proyecto |
 
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/franclarke/chatterbox-es-latam.git
-    cd chatterbox-es-latam
-    ```
+## 🔬 Estado del Proyecto
 
-2.  **Crear entorno virtual:**
-    ```bash
-    python -m venv venv
-    .\venv\Scripts\activate
-    ```
+| Fase | Estado | Descripción |
+|------|--------|-------------|
+| Fase 0 | ✅ Completada | Documentación y setup |
+| Fase 1 | 🔄 En progreso | Research ONNX |
+| Fase 2 | ⏳ Pendiente | Mejoras al servidor |
+| Fase 3 | ⏳ Pendiente | Client SDK |
+| Fase 4 | ⏳ Pendiente | Integración SAI |
+| Fase 5 | ⏳ Pendiente | Testing y producción |
 
-3.  **Instalar dependencias (IMPORTANTE):**
-    Debido a un problema de compatibilidad con la librería `pkuseg` en Windows, debés seguir este orden exacto:
+## 🛠️ Componentes
 
-    ```cmd
-    # 1. Instalar herramientas base
-    pip install numpy cython setuptools wheel
+### Servidor de Enrollment
+Procesa audio del usuario y genera Voice ID para inferencia local.
 
-    # 2. Ejecutar el script de corrección (compila pkuseg localmente)
-    fix_pkuseg.bat
-
-    # 3. Instalar el resto de dependencias
-    pip install -r requirements.txt
-    ```
-
-4.  **Login en HuggingFace:**
-    Necesario para descargar el modelo base y el dataset.
-    ```bash
-    huggingface-cli login
-    ```
-
-## ☁️ Entrenamiento en RunPod
-
-Este repositorio está optimizado para correr en **RunPod** (pods con GPU NVIDIA, ej: A40, A6000, A100).
-
-1.  **Crear Pod:** Elegí una imagen base de PyTorch (ej: `runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04`).
-2.  **Subir código:** Podés clonar el repo o subir los archivos directamente.
-3.  **Ejecutar entrenamiento:**
-    Hemos preparado un script que instala todo, arregla dependencias y lanza el entrenamiento automáticamente.
-
-    ```bash
-    chmod +x runpod_train.sh
-    ./runpod_train.sh
-    ```
-
-    *Este script guardará los logs en `logs/train_log.txt` para que puedas cerrar la terminal sin detener el proceso.*
-
-## 🛠️ Uso
-
-### Entrenamiento (Fine-Tuning)
-Para iniciar el entrenamiento manualmente:
 ```bash
-python -m src.lora_es_latam
-```
-*Configuraciones como `BATCH_SIZE`, `EPOCHS`, `LEARNING_RATE` se pueden editar directamente en `src/lora_es_latam.py`.*
-
-### Inferencia (Prueba)
-Una vez finalizado el entrenamiento, se generará la carpeta `checkpoints_lora/merged_model`. Para probarlo:
-
-1.  Abrí `src/test_inference.py` y editá el texto si deseás.
-2.  Ejecutá:
-    ```bash
-    python src/test_inference.py
-    ```
-3.  El audio generado se guardará como `test_es_ar.wav`.
-
-## 📊 Monitoreo
-Durante el entrenamiento, se genera un archivo `training_metrics.png` que se actualiza en tiempo real con gráficos de:
-- Loss (Entrenamiento y Validación)
-- Learning Rate
-- Gradientes
-
-## 📤 Subir Modelo a HuggingFace Hub
-
-Una vez finalizado el entrenamiento, podés subir tu modelo a HuggingFace para compartirlo o descargarlo en otras máquinas:
-
-1.  **Editá `upload_to_hf.py`:** Cambiá `REPO_NAME` por tu usuario y nombre de repo deseado.
-2.  **Ejecutá:**
-    ```bash
-    python upload_to_hf.py
-    ```
-
-El script subirá automáticamente:
-- El modelo completo (`merged_model/`)
-- El adaptador LoRA (más liviano)
-- Un README.md con instrucciones de uso
-
-**Descargar en otra máquina:**
-```python
-from chatterbox.tts import ChatterboxTTS
-model = ChatterboxTTS.from_pretrained("tu-usuario/chatterbox-es-ar")
+cd server
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-## 🐛 Solución de Problemas Comunes
+### Training (LoRA)
+Fine-tuning del modelo Chatterbox para español LATAM.
 
-- **Error `pkuseg` / `numpy`:** Asegurate de haber corrido `fix_pkuseg.bat` (Windows) o usar `runpod_train.sh` (Linux) que manejan la compilación manual de esta librería.
-- **Error `torchcodec`:** Si aparece este error, es porque `datasets` no detectó `soundfile`. Asegurate de haber instalado `requirements.txt` completo.
-- **OOM (Out of Memory):** Reducí el `BATCH_SIZE` en `src/lora_es_latam.py` a 1.
+```bash
+cd training
+python lora_es_latam.py
+```
+
+### Client SDK (En desarrollo)
+SDK TypeScript para inferencia ONNX en tablets.
+
+```typescript
+import { ChatterboxTTS } from '@neufitech/chatterbox-client';
+
+const tts = await ChatterboxTTS.create();
+await tts.loadVoice('./voices/user.onnx');
+await tts.speak("Hola mundo");
+```
+
+## 📋 Requisitos
+
+### Servidor
+- Python 3.10+
+- CUDA 11.8+ (para GPU)
+- 8GB+ VRAM
+
+### Client (Tablets)
+- Windows 10/11
+- 8GB+ RAM
+- Surface Pro 9/11 recomendado
+
+## 👥 Contribuir
+
+1. Fork el repositorio
+2. Crear branch (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit cambios (`git commit -am 'Agrega nueva funcionalidad'`)
+4. Push al branch (`git push origin feature/nueva-funcionalidad`)
+5. Crear Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT - ver [LICENSE](LICENSE) para detalles.
+
+## 🙏 Agradecimientos
+
+- [Resemble AI](https://github.com/resemble-ai/chatterbox) por Chatterbox TTS
+- Equipo de Neufitech

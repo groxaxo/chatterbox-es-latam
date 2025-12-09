@@ -1,5 +1,6 @@
 import soundfile as sf
 import torch
+import numpy as np
 from chatterbox.tts import ChatterboxTTS
 
 def main():
@@ -23,18 +24,44 @@ def main():
     print(f"Generating audio for: '{text}'")
     
     # Generate audio
+    # Generate audio
     try:
-        wav = model.generate(text, lang="es")
+        # Tuned parameters for better stopping and quality
+        wav = model.generate(
+            text,
+            temperature=0.7,  # Less random
+            top_p=0.9,       # Nucleus sampling
+            repetition_penalty=1.2,
+            min_p=0.05
+        )
         
         # Ensure wav is numpy array for soundfile
         if isinstance(wav, torch.Tensor):
             wav = wav.cpu().numpy()
+        
+        # Ensure wav is 1D
+        if len(wav.shape) > 1:
+            wav = wav.squeeze()
+            
+        # Trim silence (simple energy-based trimming)
+        # Assuming 24kHz sample rate
+        threshold = 0.01
+        # Find first and last sample above threshold
+        mask = np.abs(wav) > threshold
+        if np.any(mask):
+            start = np.argmax(mask)
+            end = len(wav) - np.argmax(mask[::-1])
+            # Add a bit of padding (0.1s)
+            pad = int(0.1 * 24000)
+            start = max(0, start - pad)
+            end = min(len(wav), end + pad)
+            wav = wav[start:end]
             
         # Save to file
         output_path = "test_es_ar.wav"
         sf.write(output_path, wav, 24000)
         
-        print(f"Listo, generé {output_path}")
+        print(f"Listo, generé {output_path} (Duration: {len(wav)/24000:.2f}s)")
         
     except Exception as e:
         print(f"Error during generation: {e}")

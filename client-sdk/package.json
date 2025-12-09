@@ -1,0 +1,41 @@
+{
+  "name": "@neufitech/chatterbox-client",
+  "version": "0.1.0",
+  "description": "Client SDK for Chatterbox ES-LATAM TTS - Local inference on Surface tablets",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "keywords": [
+    "tts",
+    "text-to-speech",
+    "onnx",
+    "spanish",
+    "accessibility",
+    "aac"
+  ],
+  "author": "Neufitech",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/chatterbox-es-latam.git"
+  },
+  "dependencies": {
+    "onnxruntime-node": "^1.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

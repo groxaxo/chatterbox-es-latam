@@ -25,7 +25,10 @@ from chatterbox.models.voice_encoder import VoiceEncoder
 from chatterbox.models.t3.modules.cond_enc import T3Cond
 
 # Import custom dataset
-from .dataset_orpheus import HFOrpheusDataset
+try:
+    from .dataset_orpheus import HFOrpheusDataset
+except ImportError:
+    from dataset_orpheus import HFOrpheusDataset
 
 # Add matplotlib imports for metrics tracking
 import matplotlib
@@ -37,7 +40,7 @@ from collections import deque
 from datetime import datetime
 
 # Hardcoded configuration
-BATCH_SIZE = 1
+BATCH_SIZE = 16
 EPOCHS = 10
 LEARNING_RATE = 2e-5  
 WARMUP_STEPS = 500 
@@ -46,7 +49,7 @@ MIN_AUDIO_LENGTH = 1.0
 LORA_RANK = 32  
 LORA_ALPHA = 64  
 LORA_DROPOUT = 0.05  
-GRADIENT_ACCUMULATION_STEPS = 8
+GRADIENT_ACCUMULATION_STEPS = 16
 SAVE_EVERY_N_STEPS = 200
 CHECKPOINT_DIR = "checkpoints_lora"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -838,10 +841,7 @@ def main():
     print("Creating merged model...")
     
     # Clone the model state for merging
-    merged_model = ChatterboxTTS.from_pretrained(
-        repo_id="ResembleAI/chatterbox-multilingual",
-        device=DEVICE,
-    )
+    merged_model = ChatterboxTTS.from_pretrained(device=DEVICE)
     
     # Re-inject LoRA layers and load final weights
     merged_lora_layers = inject_lora_layers(

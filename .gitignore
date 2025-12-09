@@ -1,21 +1,57 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
 venv/
+env/
+.venv/
 .env
 
-# Training Artifacts
+# Training Artifacts (large files)
 checkpoints_lora/
+*.pt
+*.ckpt
+*.safetensors
 logs/
-training_metrics.png
+*.png
+
+# Audio files (test/temporary)
 *.wav
+*.mp3
+*.flac
 
 # Temporary build files
 pkuseg_tmp/
 build/
 dist/
 *.egg-info/
+*.egg
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (for client-sdk and web)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ONNX models (large)
+*.onnx
+models/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Coverage
+.coverage
+htmlcov/
