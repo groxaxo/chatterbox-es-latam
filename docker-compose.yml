@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  chatterbox-tts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        RUNTIME: nvidia  # Change to 'cpu' for CPU-only
+    image: chatterbox-es-latam:latest
+    container_name: chatterbox-tts-server
+    ports:
+      - "8004:8004"
+    volumes:
+      # Mount voices directory for custom voices
+      - ./voices:/app/voices
+      # Mount reference audio directory
+      - ./reference_audio:/app/reference_audio
+      # Mount outputs directory to persist generated audio
+      - ./outputs:/app/outputs
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Mount config for easy modification
+      - ./config.yaml:/app/config.yaml
+    environment:
+      - HF_HOME=/app/hf_cache
+      - CUDA_VISIBLE_DEVICES=0  # Specify GPU(s)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1  # Number of GPUs
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy for production
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: chatterbox-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - chatterbox-tts
+  #   restart: unless-stopped
+
+networks:
+  default:
+    name: chatterbox-network
