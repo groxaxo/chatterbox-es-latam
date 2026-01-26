@@ -1,0 +1,55 @@
+# requirements-nvidia.txt (For NVIDIA GPU Installation with CUDA 12.1)
+# Chatterbox ES-LATAM TTS Server - CUDA-enabled dependencies
+
+# Use the official PyTorch package index for CUDA 12.1
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+# PyTorch with CUDA support
+# Updated to 2.6.0 to patch CVE: torch.load RCE vulnerability
+torch==2.6.0+cu121
+torchvision==0.21.0+cu121
+torchaudio==2.6.0+cu121
+
+# --- Core TTS Application ---
+# Chatterbox TTS engine - using v2 fork for compatibility
+chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master
+
+# --- Web Framework & Server ---
+fastapi
+uvicorn[standard]
+
+# --- Scientific Computing & ML Libraries ---
+numpy>=1.24.0,<1.26.0
+librosa
+safetensors
+descript-audio-codec
+
+# --- Audio I/O & Processing ---
+soundfile
+pydub
+audiotsm
+praat-parselmouth
+
+# --- Web & API Utilities ---
+python-multipart
+requests
+Jinja2
+aiofiles
+hf_transfer
+
+# --- Configuration & Data Processing ---
+PyYAML
+watchdog
+unidecode
+inflect
+tqdm
+
+# --- Training Dependencies ---
+datasets>=2.21.0
+matplotlib>=3.5.0
+huggingface_hub
+pydantic-settings>=2.0.0
+
+# --- ONNX ---
+onnx>=1.14.0
+onnxruntime-gpu>=1.16.0  # GPU-enabled ONNX runtime

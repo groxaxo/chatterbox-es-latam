@@ -1,30 +1,69 @@
-# Chatterbox ES-LATAM Requirements
-# For full setup (server + training)
+# ============================================================================
+# CHATTERBOX ES-LATAM TTS SERVER - REQUIREMENTS (CPU-ONLY)
+# ============================================================================
+# Based on chatterbox-tts-server with ES-LATAM model support
 
-# Core ML
-torch>=2.0.0
-torchaudio>=2.0.0
-numpy>=1.26.0
+# --- PyTorch CPU-Only Installation Index ---
+--extra-index-url https://download.pytorch.org/whl/cpu
 
-# Audio Processing
-librosa>=0.10.0
-soundfile>=0.12.0
+# --- Deep Learning Framework (CPU-Only) ---
+# Updated to 2.6.0 to patch CVE: torch.load RCE vulnerability
+torch==2.6.0
+torchvision==0.21.0
+torchaudio==2.6.0
 
-# TTS Model
-chatterbox-tts
+# --- Core TTS Application ---
+# Chatterbox TTS engine - using v2 fork for compatibility
+chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master
 
-# Training
-datasets>=2.21.0
-tqdm
-matplotlib>=3.5.0
-huggingface_hub
+# --- Web Framework & Server ---
+fastapi                         # Modern async web framework
+uvicorn[standard]               # ASGI server with performance extras
 
-# Server
-fastapi>=0.100.0
-uvicorn>=0.23.0
-pydantic-settings>=2.0.0
-python-multipart  # For file uploads
+# --- Scientific Computing & ML Libraries ---
+numpy>=1.24.0,<1.26.0           # Fundamental numerical computing
+librosa                         # Advanced audio/music analysis
+safetensors                     # Safe tensor serialization
+descript-audio-codec            # Audio codec for ML applications
 
-# ONNX (for export/inference)
+# --- Audio I/O & Processing ---
+soundfile                       # Audio file I/O (requires libsndfile)
+pydub                          # Simple audio manipulation
+audiotsm                       # Audio time-scale modification
+praat-parselmouth              # Python interface to Praat speech analysis
+
+# --- Web & API Utilities ---
+python-multipart               # Form data parsing for FastAPI
+requests                       # HTTP client library
+Jinja2                        # Template engine
+aiofiles                      # Async file operations
+hf_transfer                   # Speed up HuggingFace transfers
+
+# --- Configuration & Data Processing ---
+PyYAML                        # YAML configuration file support
+watchdog                      # File system event monitoring
+unidecode                     # Unicode text transliteration
+inflect                       # Natural language inflection
+tqdm                          # Progress bars
+
+# --- Training Dependencies (optional) ---
+datasets>=2.21.0              # For dataset processing
+matplotlib>=3.5.0             # For visualization
+huggingface_hub               # For model hub integration
+pydantic-settings>=2.0.0      # Settings management
+
+# --- ONNX (for export/inference) ---
 onnx>=1.14.0
 onnxruntime>=1.16.0
+
+# ============================================================================
+# INSTALLATION NOTES:
+# 
+# 1. Ensure virtual environment is activated
+# 2. Run: pip install --upgrade pip
+# 3. Run: pip install -r requirements.txt
+# 4. For GPU support, use requirements-nvidia.txt instead
+# 5. System dependencies required:
+#    - libsndfile (for soundfile)
+#    - FFmpeg (for audio processing)
+# ============================================================================
