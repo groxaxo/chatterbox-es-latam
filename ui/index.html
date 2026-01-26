@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatterbox ES-LATAM - Síntesis de Voz</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header Banner -->
+    <div class="banner">
+        <svg width="100%" height="180" viewBox="0 0 1200 180" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <linearGradient id="latamBg" x1="0" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#fdc830"/>
+                    <stop offset="0.3" stop-color="#f37335"/>
+                    <stop offset="0.6" stop-color="#4ecdc4"/>
+                    <stop offset="1" stop-color="#3a86ff"/>
+                </linearGradient>
+                <linearGradient id="waveGrad" x1="0" y1="90" x2="1200" y2="90" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#fff"/>
+                    <stop offset="1" stop-color="#eee"/>
+                </linearGradient>
+            </defs>
+            <rect width="1200" height="180" fill="url(#latamBg)" />
+            <path d="M30,110 Q80,90 120,120 T210,100 T300,130 T390,110 T480,140 T570,120 T660,100 T750,130 T840,110 T930,140 T1020,120 T1110,110 T1200,130"
+                  stroke="url(#waveGrad)" stroke-width="10" fill="none" opacity="0.7"/>
+            <g transform="translate(60,30)">
+                <ellipse cx="20" cy="40" rx="18" ry="34" fill="#fff8e1" stroke="#f37335" stroke-width="2"/>
+                <rect x="16" y="74" width="8" height="15" fill="#f37335"/>
+                <rect x="10" y="89" width="20" height="6" rx="3" fill="#fdc830"/>
+            </g>
+            <text x="140" y="75" font-family="'Montserrat', Arial, sans-serif" font-size="42" fill="#fff"
+                  font-weight="bold" letter-spacing="1">
+                Chatterbox ES-LATAM
+            </text>
+            <text x="145" y="115" font-family="'Montserrat', Arial, sans-serif"
+                  font-size="24" fill="#fff8e1" font-weight="500">
+                Sistema de Síntesis de Voz para Español Latinoamericano
+            </text>
+            <g transform="translate(1040,30)">
+                <ellipse cx="32" cy="30" rx="38" ry="28" fill="#fff" />
+                <polygon points="32,55 42,75 20,60" fill="#fff"/>
+                <text x="12" y="37" font-family="'Montserrat', Arial, sans-serif" font-size="20"
+                      fill="#f37335" font-weight="bold">¡Hola!</text>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Model Status -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">Modelo Activo:</span>
+                <span id="model-status" class="status-value">Cargando...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Dispositivo:</span>
+                <span id="device-status" class="status-value">-</span>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="content-grid">
+            <!-- Left Panel: Generation -->
+            <div class="panel">
+                <h2 class="panel-title">🎙️ Generar Voz</h2>
+                
+                <!-- Text Input -->
+                <div class="form-group">
+                    <label for="text-input">Texto a sintetizar</label>
+                    <textarea 
+                        id="text-input" 
+                        rows="6" 
+                        placeholder="Escribe el texto que deseas convertir a voz en español...&#10;&#10;Ejemplo: Hola, bienvenido al sistema de síntesis de voz Chatterbox ES-LATAM. Este modelo está optimizado para español latinoamericano."
+                    ></textarea>
+                    <div class="char-count">
+                        <span id="char-count">0</span> caracteres
+                    </div>
+                </div>
+
+                <!-- Voice Mode Selection -->
+                <div class="form-group">
+                    <label>Modo de Voz</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="voice-mode" value="predefined" checked>
+                            <span>Voces Predefinidas</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="voice-mode" value="clone">
+                            <span>Clonación de Voz (Referencia)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Predefined Voice Selection -->
+                <div class="form-group" id="predefined-voice-group">
+                    <label for="predefined-voice">Seleccionar Voz</label>
+                    <select id="predefined-voice" class="select-input">
+                        <option value="">Cargando voces...</option>
+                    </select>
+                </div>
+
+                <!-- Reference Audio Upload -->
+                <div class="form-group hidden" id="reference-audio-group">
+                    <label for="reference-audio">Audio de Referencia</label>
+                    <input type="file" id="reference-audio" accept="audio/*" class="file-input">
+                    <small class="help-text">Sube un archivo de audio claro (3-10 segundos recomendado)</small>
+                </div>
+
+                <!-- Generation Parameters -->
+                <details class="params-details">
+                    <summary class="params-summary">⚙️ Parámetros de Generación</summary>
+                    <div class="params-grid">
+                        <div class="param-item">
+                            <label for="temperature">Temperatura (<span id="temp-value">0.8</span>)</label>
+                            <input type="range" id="temperature" min="0" max="1.5" step="0.1" value="0.8">
+                            <small>Controla la aleatoriedad (menor = más determinista)</small>
+                        </div>
+                        <div class="param-item">
+                            <label for="exaggeration">Expresividad (<span id="exag-value">1.0</span>)</label>
+                            <input type="range" id="exaggeration" min="0.25" max="2.0" step="0.05" value="1.0">
+                            <small>Controla la expresividad/exageración</small>
+                        </div>
+                        <div class="param-item">
+                            <label for="cfg-weight">Peso CFG (<span id="cfg-value">0.5</span>)</label>
+                            <input type="range" id="cfg-weight" min="0.2" max="1.0" step="0.05" value="0.5">
+                            <small>Influencia del estilo y ritmo</small>
+                        </div>
+                        <div class="param-item">
+                            <label for="speed">Velocidad (<span id="speed-value">1.0</span>x)</label>
+                            <input type="range" id="speed" min="0.25" max="4.0" step="0.25" value="1.0">
+                            <small>Velocidad del audio generado</small>
+                        </div>
+                        <div class="param-item">
+                            <label for="seed">Semilla (Reproducibilidad)</label>
+                            <input type="number" id="seed" min="0" value="0" class="number-input">
+                            <small>0 = aleatorio, otro valor = reproducible</small>
+                        </div>
+                        <div class="param-item">
+                            <label for="format">Formato de Salida</label>
+                            <select id="format" class="select-input">
+                                <option value="wav">WAV (Sin compresión)</option>
+                                <option value="mp3">MP3 (Comprimido)</option>
+                                <option value="opus">Opus (Alta calidad)</option>
+                            </select>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Generate Button -->
+                <button id="generate-btn" class="btn btn-primary btn-large">
+                    🎵 Generar Audio
+                </button>
+
+                <!-- Loading State -->
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Generando audio...</p>
+                </div>
+
+                <!-- Result -->
+                <div id="result" class="result hidden">
+                    <h3 class="result-title">✅ Audio Generado</h3>
+                    <audio id="result-audio" controls class="audio-player"></audio>
+                    <div class="result-actions">
+                        <button id="download-btn" class="btn btn-secondary">
+                            📥 Descargar
+                        </button>
+                        <button id="regenerate-btn" class="btn btn-secondary">
+                            🔄 Regenerar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Information & Help -->
+            <div class="panel">
+                <h2 class="panel-title">📖 Información</h2>
+                
+                <div class="info-card">
+                    <h3 class="info-title">Acerca de Este Sistema</h3>
+                    <p class="info-text">
+                        Chatterbox ES-LATAM es un sistema avanzado de síntesis de voz (TTS) optimizado 
+                        para español latinoamericano. Utiliza inteligencia artificial para generar voces 
+                        naturales y expresivas a partir de texto.
+                    </p>
+                </div>
+
+                <div class="info-card">
+                    <h3 class="info-title">🎯 Características Principales</h3>
+                    <ul class="feature-list">
+                        <li>✨ Voces naturales y expresivas en español LATAM</li>
+                        <li>🎭 Clonación de voz con audio de referencia</li>
+                        <li>⚡ Generación rápida con soporte GPU (CUDA)</li>
+                        <li>🎚️ Control avanzado de parámetros</li>
+                        <li>🌐 API compatible con OpenAI</li>
+                        <li>📝 Soporte para textos largos</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3 class="info-title">💡 Consejos de Uso</h3>
+                    <ul class="tips-list">
+                        <li><strong>Para mejor calidad:</strong> Usa audio de referencia claro y sin ruido</li>
+                        <li><strong>Temperatura:</strong> Valores bajos (0.3-0.5) = más estable, valores altos (0.8-1.2) = más variado</li>
+                        <li><strong>Expresividad:</strong> Ajusta según necesites voz neutra (0.5) o dramática (1.5-2.0)</li>
+                        <li><strong>Textos largos:</strong> El sistema puede manejar artículos completos o capítulos</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3 class="info-title">🔌 API Endpoints</h3>
+                    <div class="api-info">
+                        <code class="code-block">POST /v1/audio/speech</code>
+                        <p class="api-desc">Compatible con OpenAI TTS API</p>
+                        
+                        <code class="code-block">POST /tts</code>
+                        <p class="api-desc">Endpoint personalizado con parámetros avanzados</p>
+                        
+                        <code class="code-block">GET /health</code>
+                        <p class="api-desc">Estado del servidor y modelo</p>
+                    </div>
+                </div>
+
+                <div class="info-card tech-specs">
+                    <h3 class="info-title">🛠️ Especificaciones Técnicas</h3>
+                    <table class="specs-table">
+                        <tr>
+                            <td><strong>Modelo:</strong></td>
+                            <td>Chatterbox ES-LATAM</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Idioma:</strong></td>
+                            <td>Español Latinoamericano</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sample Rate:</strong></td>
+                            <td>24kHz</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Formatos:</strong></td>
+                            <td>WAV, MP3, Opus</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>
+            Chatterbox ES-LATAM TTS Server v1.0 | 
+            Basado en <a href="https://github.com/resemble-ai/chatterbox" target="_blank">Chatterbox TTS</a> | 
+            <a href="https://github.com/groxaxo/chatterbox-es-latam" target="_blank">GitHub</a>
+        </p>
+    </footer>
+
+    <script src="/ui/script.js"></script>
+</body>
+</html>
