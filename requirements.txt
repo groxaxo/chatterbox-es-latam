@@ -8,13 +8,12 @@
 
 # --- Deep Learning Framework (CPU-Only) ---
 # Updated to 2.6.0 to patch CVE: torch.load RCE vulnerability
-torch==2.6.0
-torchvision==0.21.0
-torchaudio==2.6.0
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
 
 # --- Core TTS Application ---
-# Chatterbox TTS engine - using v2 fork for compatibility
-chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master
+# chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master
 
 # --- Web Framework & Server ---
 fastapi                         # Modern async web framework
@@ -48,13 +47,13 @@ tqdm                          # Progress bars
 
 # --- Training Dependencies (optional) ---
 datasets>=2.21.0              # For dataset processing
-matplotlib>=3.5.0             # For visualization
+matplotlib==3.7.5             # For visualization
 huggingface_hub               # For model hub integration
 pydantic-settings>=2.0.0      # Settings management
 
 # --- ONNX (for export/inference) ---
-onnx>=1.14.0
-onnxruntime>=1.16.0
+# onnx>=1.14.0
+# onnxruntime>=1.16.0
 
 # ============================================================================
 # INSTALLATION NOTES:

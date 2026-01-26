@@ -280,7 +280,9 @@ def load_model() -> bool:
         logger.info(f"Final device selection: {model_device}")
 
         # Get the model selector from config
-        model_selector = config_manager.get_string("model.repo_id", "chatterbox-es-latam")
+        model_selector = config_manager.get_string(
+            "model.repo_id", "chatterbox-es-latam"
+        )
 
         logger.info(f"Model selector from config: '{model_selector}'")
 
@@ -299,10 +301,7 @@ def load_model() -> bool:
 
             # Load the model using from_pretrained - handles HuggingFace downloads automatically
             # For custom models, the repo_id should be the actual HuggingFace repo or local path
-            chatterbox_model = model_class.from_pretrained(
-                repo_id=model_selector,
-                device=model_device
-            )
+            chatterbox_model = model_class.from_pretrained(device=model_device)
 
             # Store model metadata
             loaded_model_type = model_type
@@ -405,11 +404,40 @@ def synthesize(
         )
 
         # The ChatterboxTTS.generate method already returns a CPU tensor.
+        # Convert to numpy array for compatibility with utils.encode_audio
+        if isinstance(wav_tensor, torch.Tensor):
+            wav_tensor = wav_tensor.numpy()
+
         return wav_tensor, chatterbox_model.sr
 
     except Exception as e:
         logger.error(f"Error during TTS synthesis: {e}", exc_info=True)
         return None, None
+
+
+def generate(
+    text: str,
+    voice_source_path: Optional[str] = None,
+    temperature: float = 0.8,
+    exaggeration: float = 0.5,
+    cfg_weight: float = 0.5,
+    seed: int = 0,
+    speed_factor: float = 1.0,
+    language: str = "es",
+) -> Tuple[Optional[torch.Tensor], Optional[int]]:
+    """
+    Wrapper for synthesize to match server.py expectation.
+    """
+    # Note: speed_factor and language are currently not used by the core synthesize function
+    # but are passed by server.py. We accept them here to avoid errors.
+    return synthesize(
+        text=text,
+        audio_prompt_path=voice_source_path,
+        temperature=temperature,
+        exaggeration=exaggeration,
+        cfg_weight=cfg_weight,
+        seed=seed,
+    )
 
 
 def reload_model() -> bool:
@@ -421,7 +449,12 @@ def reload_model() -> bool:
     Returns:
         bool: True if the new model loaded successfully, False otherwise.
     """
-    global chatterbox_model, MODEL_LOADED, model_device, loaded_model_type, loaded_model_class_name
+    global \
+        chatterbox_model, \
+        MODEL_LOADED, \
+        model_device, \
+        loaded_model_type, \
+        loaded_model_class_name
 
     logger.info("Initiating model hot-swap/reload sequence...")
 

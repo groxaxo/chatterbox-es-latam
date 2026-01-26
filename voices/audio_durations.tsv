@@ -1,0 +1,47 @@
+duration_seconds	status	path
+60.082	ok	/home/op/mp3/Audacity/Claudia.mp3
+56.842	ok	/home/op/mp3/Audacity/Veronica.mp3
+29.261	ok	/home/op/mp3/Brenda30secs.wav
+54.096	ok	/home/op/mp3/Luisana Lopilato explicó por qué no formará parte de la gira que marcará el regreso de Erreway [zPKRgQEcMGo].mp3
+9.273	ok	/home/op/mp3/aimee.mp3
+60.578	ok	/home/op/mp3/brenda.mp3
+42.214	ok	/home/op/mp3/colombiana.mp3
+	error:[mp3 @ 0x5e8dd9934bc0] Failed to read frame size: Could not seek to 1026. /home/op/mp3/colombiana_test.mp3: Invalid argument {  }	/home/op/mp3/colombiana_test.mp3
+3.187	ok	/home/op/mp3/english_audio.mp3
+3.135	ok	/home/op/mp3/english_audio.wav
+56.268	ok	/home/op/mp3/facu.mp3
+69.264	ok	/home/op/mp3/faculiado.mp3
+6.264	ok	/home/op/mp3/facundito.mp3
+257.496	ok	/home/op/mp3/facunormal.mp3
+5.040	ok	/home/op/mp3/facunormal_short.mp3
+30.024	ok	/home/op/mp3/facunormal_snippet.mp3
+8.040	ok	/home/op/mp3/gemini_generated_video_0B2AE980.mp3
+59.455	ok	/home/op/mp3/lucho.mp3
+7.131	ok	/home/op/mp3/michael.mp3
+4.971	ok	/home/op/mp3/output_en_1.wav
+5.269	ok	/home/op/mp3/output_en_2.wav
+5.184	ok	/home/op/mp3/output_es_1.wav
+5.312	ok	/home/op/mp3/output_es_2.wav
+1800.024	ok	/home/op/mp3/part_01_approx.mp3
+30.024	ok	/home/op/mp3/part_01_valid.mp3
+64.320	ok	/home/op/mp3/se_fue_alabosta.mp3
+300.000	ok	/home/op/mp3/segments/out000.mp3
+300.000	ok	/home/op/mp3/segments/out001.mp3
+300.000	ok	/home/op/mp3/segments/out002.mp3
+300.000	ok	/home/op/mp3/segments/out003.mp3
+179.784	ok	/home/op/mp3/segments/out004.mp3
+60.000	ok	/home/op/mp3/segments/test_1min.mp3
+120.000	ok	/home/op/mp3/segments/test_2min.mp3
+30.000	ok	/home/op/mp3/segments/test_30s.mp3
+300.000	ok	/home/op/mp3/segments/test_5min.mp3
+480.000	ok	/home/op/mp3/segments/test_8min.mp3
+1.920	ok	/home/op/mp3/soprano_output.wav
+3.448	ok	/home/op/mp3/spanish_audio.mp3
+3.379	ok	/home/op/mp3/spanish_audio.wav
+19.940	ok	/home/op/mp3/speed_test.mp3
+41.616	ok	/home/op/mp3/story_spanish.mp3
+556.896	ok	/home/op/mp3/test_audio.mp3
+	error:[mp3 @ 0x5a54369e4bc0] Failed to read frame size: Could not seek to 1201. /home/op/mp3/test_output.mp3: Invalid argument {  }	/home/op/mp3/test_output.mp3
+4.620	ok	/home/op/mp3/test_output_corrected.mp3
+39.784	ok	/home/op/mp3/vozespanola.mp3
+1379.784	ok	/home/op/mp3/youtube_test.mp3

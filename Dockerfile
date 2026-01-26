@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create a symlink for python3 to be python for convenience
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
+# Install uv for faster and reliable dependency resolution
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 # Set up working directory
 WORKDIR /app
 
@@ -32,15 +35,19 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Upgrade pip and install Python dependencies
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir -r requirements.txt
+# Upgrade pip and install Python dependencies using uv
+RUN uv pip install --system --upgrade pip && \
+    uv pip install --system -r requirements.txt --index-strategy unsafe-best-match
 
 # Conditionally install NVIDIA dependencies if RUNTIME is set to 'nvidia'
 COPY requirements-nvidia.txt .
 
 RUN if [ "$RUNTIME" = "nvidia" ]; then \
-    pip3 install --no-cache-dir -r requirements-nvidia.txt; \
+    uv pip install --system -r requirements-nvidia.txt --index-strategy unsafe-best-match; \
     fi
+
+# Install Chatterbox TTS separately to simplify dependency resolution
+RUN uv pip install --system "chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master" --index-strategy unsafe-best-match
 
 # Copy the rest of the application code
 COPY . .

@@ -6,13 +6,12 @@
 
 # PyTorch with CUDA support
 # Updated to 2.6.0 to patch CVE: torch.load RCE vulnerability
-torch==2.6.0+cu121
-torchvision==0.21.0+cu121
-torchaudio==2.6.0+cu121
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+torchaudio==2.5.1+cu121
 
 # --- Core TTS Application ---
-# Chatterbox TTS engine - using v2 fork for compatibility
-chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master
+# chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master
 
 # --- Web Framework & Server ---
 fastapi
@@ -51,5 +50,5 @@ huggingface_hub
 pydantic-settings>=2.0.0
 
 # --- ONNX ---
-onnx>=1.14.0
-onnxruntime-gpu>=1.16.0  # GPU-enabled ONNX runtime
+# onnx>=1.14.0
+# onnxruntime-gpu>=1.16.0  # GPU-enabled ONNX runtime
