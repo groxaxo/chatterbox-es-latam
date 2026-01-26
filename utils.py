@@ -243,19 +243,25 @@ def encode_audio(
             audio_array = audio_array.astype(np.float32)
         logger.debug(f"Converted audio array to float32 for encoding.")
 
-    # Ensure audio is mono if it's (samples, 1)
-    if audio_array.ndim == 2 and audio_array.shape[1] == 1:
-        audio_array = audio_array.squeeze(axis=1)
-        logger.debug(
-            "Squeezed audio array from (samples, 1) to (samples,) for encoding."
-        )
-    elif (
-        audio_array.ndim > 1
-    ):  # Multi-channel not directly supported by simple encoding path, attempt to take first channel
-        logger.warning(
-            f"Multi-channel audio (shape: {audio_array.shape}) provided to encode_audio. Using only the first channel."
-        )
-        audio_array = audio_array[:, 0]
+    # Ensure audio is mono. Handles both (samples, 1) and (1, samples)
+    if audio_array.ndim == 2:
+        if audio_array.shape[1] == 1:
+            audio_array = audio_array.squeeze(axis=1)
+            logger.debug(
+                "Squeezed audio array from (samples, 1) to (samples,) for encoding."
+            )
+        elif audio_array.shape[0] == 1:
+            audio_array = audio_array.squeeze(axis=0)
+            logger.debug(
+                "Squeezed audio array from (1, samples) to (samples,) for encoding."
+            )
+        else:
+            # Truly multi-channel (samples, channels) - take first channel
+            logger.warning(
+                f"Multi-channel audio (shape: {audio_array.shape}) provided to encode_audio. Using only the first channel."
+            )
+            # Standard numpy audio convention is (samples, channels)
+            audio_array = audio_array[:, 0]
 
     # Resample if target_sample_rate is provided and different from current sample_rate
     if (
@@ -337,10 +343,10 @@ def encode_audio(
             audio_clipped = np.clip(audio_array, -1.0, 1.0)
             audio_int16 = (audio_clipped * 32767).astype(np.int16)
             audio_segment = AudioSegment(
-            audio_int16.tobytes(),
-            frame_rate=sample_rate,
-            sample_width=2,
-            channels=1,
+                audio_int16.tobytes(),
+                frame_rate=sample_rate,
+                sample_width=2,
+                channels=1,
             )
             audio_segment.export(output_buffer, format="mp3")
 

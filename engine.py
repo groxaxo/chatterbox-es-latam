@@ -428,9 +428,7 @@ def generate(
     """
     Wrapper for synthesize to match server.py expectation.
     """
-    # Note: speed_factor and language are currently not used by the core synthesize function
-    # but are passed by server.py. We accept them here to avoid errors.
-    return synthesize(
+    wav_tensor, sr = synthesize(
         text=text,
         audio_prompt_path=voice_source_path,
         temperature=temperature,
@@ -438,6 +436,13 @@ def generate(
         cfg_weight=cfg_weight,
         seed=seed,
     )
+
+    if wav_tensor is not None and speed_factor != 1.0:
+        import utils
+
+        wav_tensor, sr = utils.apply_speed_factor(wav_tensor, sr, speed_factor)
+
+    return wav_tensor, sr
 
 
 def reload_model() -> bool:
