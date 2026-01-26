@@ -299,7 +299,10 @@ def load_model() -> bool:
 
             # Load the model using from_pretrained - handles HuggingFace downloads automatically
             # For custom models, the repo_id should be the actual HuggingFace repo or local path
-            chatterbox_model = model_class.from_pretrained(device=model_device)
+            chatterbox_model = model_class.from_pretrained(
+                repo_id=model_selector,
+                device=model_device
+            )
 
             # Store model metadata
             loaded_model_type = model_type

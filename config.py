@@ -37,7 +37,7 @@ DEFAULT_OUTPUT_PATH = Path("./outputs")  # For server-saved audio outputs (if an
 DEFAULT_CONFIG: Dict[str, Any] = {
     "server": {
         "host": "0.0.0.0",  # Host address for the server to listen on.
-        "port": 8000,  # Port number for the server.
+        "port": 8004,  # Port number for the server.
         "use_ngrok": False,  # Placeholder for ngrok integration (if used).
         "use_auth": False,  # Placeholder for basic authentication (if used).
         "auth_username": "user",  # Default username if authentication is enabled.
@@ -76,7 +76,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "cfg_weight": 0.5,  # Classifier-Free Guidance weight, influences adherence to prompt/style.
         "seed": 0,  # Random seed for generation. 0 often means random or engine default.
         "speed_factor": 1.0,  # Controls the speed of the generated speech.
-        "language": "en",  # Default language for TTS.
+        "language": "es",  # Default language for TTS (Spanish for ES-LATAM).
     },
     "audio_output": {  # Settings related to the format of generated audio.
         "format": "wav",  # Output audio format (e.g., 'wav', 'mp3').
