@@ -136,13 +136,17 @@ async def lifespan(app: FastAPI):
             get_reference_audio_path(),
             get_predefined_voices_path(),
             Path("ui"),
-            config_manager.get_path("paths.model_cache", "./model_cache", ensure_absolute=True),
+            config_manager.get_path(
+                "paths.model_cache", "./model_cache", ensure_absolute=True
+            ),
         ]
         for p in paths_to_ensure:
             p.mkdir(parents=True, exist_ok=True)
 
         if not engine.load_model():
-            logger.critical("CRITICAL: TTS Model failed to load. Server might not function correctly.")
+            logger.critical(
+                "CRITICAL: TTS Model failed to load. Server might not function correctly."
+            )
         else:
             logger.info("TTS Model loaded successfully.")
             host_address = get_host()
@@ -190,21 +194,21 @@ else:
     logger.warning(f"UI directory not found at '{ui_static_path}'.")
 
 if (ui_static_path / "vendor").is_dir():
-    app.mount("/vendor", StaticFiles(directory=ui_static_path / "vendor"), name="vendor_files")
+    app.mount(
+        "/vendor", StaticFiles(directory=ui_static_path / "vendor"), name="vendor_files"
+    )
 
 outputs_static_path = get_output_path(ensure_absolute=True)
 try:
-    app.mount("/outputs", StaticFiles(directory=str(outputs_static_path)), name="generated_outputs")
+    app.mount(
+        "/outputs",
+        StaticFiles(directory=str(outputs_static_path)),
+        name="generated_outputs",
+    )
 except RuntimeError as e:
     logger.error(f"Failed to mount /outputs directory: {e}")
 
 templates = Jinja2Templates(directory=str(ui_static_path))
-
-
-@app.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def serve_index(request: Request):
-    """Serves main UI page"""
-    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/health")
@@ -213,23 +217,77 @@ async def health_check():
     return {
         "status": "healthy",
         "model_loaded": engine.MODEL_LOADED,
-        "device": str(engine.model_device) if engine.model_device else "unknown"
+        "device": str(engine.model_device) if engine.model_device else "unknown",
     }
+
+
+def get_available_voices_list():
+    """Helper to list voices from the voices directory"""
+    voices_path = get_predefined_voices_path()
+    voices = []
+
+    # Common audio extensions
+    extensions = {".wav", ".mp3", ".opus", ".flac", ".m4a"}
+
+    if voices_path.exists():
+        for file in voices_path.iterdir():
+            if file.is_file() and file.suffix.lower() in extensions:
+                voices.append(
+                    {"id": file.name, "name": file.stem.replace("_", " ").title()}
+                )
+
+    # Sort by name
+    voices.sort(key=lambda x: x["name"])
+    return voices
+
+
+@app.get("/v1/audio/voices")
+@app.get("/v1/voices")
+async def list_voices():
+    """List available voices for Open-WebUI compatibility"""
+    return {"voices": get_available_voices_list()}
+
+
+@app.get("/v1/audio/models")
+@app.get("/v1/models")
+async def list_models():
+    """List available models for Open-WebUI / OpenAI compatibility"""
+    # For this server, we mostly use a single model identified as 'chatterbox-es-latam'
+    # but we also expose 'tts-1' for default compatibility.
+    models_list = [
+        {
+            "id": "chatterbox-es-latam",
+            "object": "model",
+            "created": int(time.time()),
+            "owned_by": "chatterbox",
+        },
+        {
+            "id": "tts-1",
+            "object": "model",
+            "created": int(time.time()),
+            "owned_by": "openai",
+        },
+    ]
+
+    # Open-WebUI might expect a simple list under "models" or the OpenAI "data" format
+    return {"models": models_list, "data": models_list, "object": "list"}
 
 
 @app.post("/v1/audio/speech")
 async def openai_compatible_tts(request: OpenAISpeechRequest):
     """OpenAI-compatible TTS endpoint"""
     logger.info(f"OpenAI API request: model={request.model}, voice={request.voice}")
-    
+
     # Map request to internal format
     voice_path = get_predefined_voices_path() / request.voice
     if not voice_path.exists():
         # Try adding .wav extension
         voice_path = get_predefined_voices_path() / f"{request.voice}.wav"
         if not voice_path.exists():
-            raise HTTPException(status_code=404, detail=f"Voice '{request.voice}' not found")
-    
+            raise HTTPException(
+                status_code=404, detail=f"Voice '{request.voice}' not found"
+            )
+
     # Generate audio
     params = {
         "temperature": get_gen_default_temperature(),
@@ -239,43 +297,37 @@ async def openai_compatible_tts(request: OpenAISpeechRequest):
         "speed_factor": request.speed,
         "language": get_gen_default_language(),
     }
-    
+
     audio_array, sample_rate = engine.generate(
-        text=request.input_,
-        voice_source_path=str(voice_path),
-        **params
+        text=request.input_, voice_source_path=str(voice_path), **params
     )
-    
+
     if audio_array is None:
         raise HTTPException(status_code=500, detail="Audio generation failed")
-    
+
     # Encode audio
     audio_bytes = utils.encode_audio(
-        audio_array,
-        sample_rate,
-        output_format=request.response_format
+        audio_array, sample_rate, output_format=request.response_format
     )
-    
+
     if audio_bytes is None:
         raise HTTPException(status_code=500, detail="Audio encoding failed")
-    
-    media_type_map = {
-        "wav": "audio/wav",
-        "opus": "audio/opus",
-        "mp3": "audio/mpeg"
-    }
-    
+
+    media_type_map = {"wav": "audio/wav", "opus": "audio/opus", "mp3": "audio/mpeg"}
+
     return StreamingResponse(
         io.BytesIO(audio_bytes),
-        media_type=media_type_map.get(request.response_format, "audio/wav")
+        media_type=media_type_map.get(request.response_format, "audio/wav"),
     )
 
 
 @app.post("/tts")
 async def custom_tts(request: CustomTTSRequest):
     """Custom TTS endpoint with advanced features"""
-    logger.info(f"TTS request: mode={request.voice_mode}, text_length={len(request.text)}")
-    
+    logger.info(
+        f"TTS request: mode={request.voice_mode}, text_length={len(request.text)}"
+    )
+
     # Determine voice source
     if request.voice_mode == "predefined":
         if not request.predefined_voice_id:
@@ -283,51 +335,64 @@ async def custom_tts(request: CustomTTSRequest):
         voice_path = get_predefined_voices_path() / request.predefined_voice_id
     else:  # clone mode
         if not request.reference_audio_filename:
-            raise HTTPException(status_code=400, detail="reference_audio_filename required")
+            raise HTTPException(
+                status_code=400, detail="reference_audio_filename required"
+            )
         voice_path = get_reference_audio_path() / request.reference_audio_filename
-    
+
     if not voice_path.exists():
-        raise HTTPException(status_code=404, detail=f"Voice file not found: {voice_path}")
-    
+        raise HTTPException(
+            status_code=404, detail=f"Voice file not found: {voice_path}"
+        )
+
     # Prepare generation parameters
     params = {
-        "temperature": request.temperature if request.temperature is not None else get_gen_default_temperature(),
-        "exaggeration": request.exaggeration if request.exaggeration is not None else get_gen_default_exaggeration(),
-        "cfg_weight": request.cfg_weight if request.cfg_weight is not None else get_gen_default_cfg_weight(),
+        "temperature": request.temperature
+        if request.temperature is not None
+        else get_gen_default_temperature(),
+        "exaggeration": request.exaggeration
+        if request.exaggeration is not None
+        else get_gen_default_exaggeration(),
+        "cfg_weight": request.cfg_weight
+        if request.cfg_weight is not None
+        else get_gen_default_cfg_weight(),
         "seed": request.seed if request.seed is not None else get_gen_default_seed(),
-        "speed_factor": request.speed_factor if request.speed_factor is not None else get_gen_default_speed_factor(),
-        "language": request.language if request.language else get_gen_default_language(),
+        "speed_factor": request.speed_factor
+        if request.speed_factor is not None
+        else get_gen_default_speed_factor(),
+        "language": request.language
+        if request.language
+        else get_gen_default_language(),
     }
-    
+
     # Generate audio
     audio_array, sample_rate = engine.generate(
-        text=request.text,
-        voice_source_path=str(voice_path),
-        **params
+        text=request.text, voice_source_path=str(voice_path), **params
     )
-    
+
     if audio_array is None:
         raise HTTPException(status_code=500, detail="Audio generation failed")
-    
+
     # Encode audio
-    output_format = request.output_format if request.output_format else get_audio_output_format()
-    audio_bytes = utils.encode_audio(audio_array, sample_rate, output_format=output_format)
-    
+    output_format = (
+        request.output_format if request.output_format else get_audio_output_format()
+    )
+    audio_bytes = utils.encode_audio(
+        audio_array, sample_rate, output_format=output_format
+    )
+
     if audio_bytes is None:
         raise HTTPException(status_code=500, detail="Audio encoding failed")
-    
-    media_type_map = {
-        "wav": "audio/wav",
-        "opus": "audio/opus",
-        "mp3": "audio/mpeg"
-    }
-    
+
+    media_type_map = {"wav": "audio/wav", "opus": "audio/opus", "mp3": "audio/mpeg"}
+
     return StreamingResponse(
         io.BytesIO(audio_bytes),
-        media_type=media_type_map.get(output_format, "audio/wav")
+        media_type=media_type_map.get(output_format, "audio/wav"),
     )
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host=get_host(), port=get_port())
