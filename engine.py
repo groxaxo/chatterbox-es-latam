@@ -57,10 +57,11 @@ else:
     logger.info("bitsandbytes not installed. NF4 quantization unavailable.")
 
 
-def _apply_ampere_optimizations():
+def _apply_cuda_optimizations():
     """
-    Applies GPU optimizations for Ampere architecture (compute capability >= 8.0).
-    RTX 3090 is compute capability 8.6.
+    Applies GPU optimizations for CUDA devices.
+    TF32 provides ~3x speedup on Ampere+ (compute capability >= 8.0, e.g. RTX 3090).
+    On older architectures, TF32 flags are safely ignored.
     """
     if not torch.cuda.is_available():
         return
@@ -93,7 +94,8 @@ def _quantize_model_nf4(model):
 
     device = next(model.parameters()).device
     quantized_count = 0
-    min_features = 128  # Skip tiny layers that don't benefit from quantization
+    # Skip tiny layers where quantization overhead outweighs VRAM savings
+    min_features = config_manager.get_int("gpu_optimizations.nf4_min_features", 128)
 
     for name, module in list(model.named_modules()):
         for child_name, child in list(module.named_children()):
@@ -158,6 +160,7 @@ MODEL_LOADED: bool = False
 model_device: Optional[str] = (
     None  # Stores the resolved device string ('cuda' or 'cpu')
 )
+_use_bf16_inference: bool = False  # Cached BF16 inference flag, set during model loading
 
 # Track which model type is loaded
 loaded_model_type: Optional[str] = None  # "original", "turbo", or "custom"
@@ -279,6 +282,7 @@ def get_model_info() -> dict:
     Returns:
         Dictionary containing model information
     """
+    is_cuda = model_device == "cuda"
     return {
         "loaded": MODEL_LOADED,
         "type": loaded_model_type,  # "original", "turbo", or "custom"
@@ -291,11 +295,11 @@ def get_model_info() -> dict:
         ),
         "turbo_available_in_package": TURBO_AVAILABLE,
         "gpu_optimizations": {
-            "tf32_enabled": get_gpu_enable_tf32() and model_device == "cuda",
-            "cudnn_benchmark": get_gpu_cudnn_benchmark() and model_device == "cuda",
-            "bf16_inference": get_gpu_use_bf16_inference() and model_device == "cuda",
-            "nf4_quantization": get_gpu_use_nf4_quantization() and model_device == "cuda",
-            "torch_compile": get_gpu_use_torch_compile() and model_device == "cuda",
+            "tf32_enabled": is_cuda and get_gpu_enable_tf32(),
+            "cudnn_benchmark": is_cuda and get_gpu_cudnn_benchmark(),
+            "bf16_inference": is_cuda and get_gpu_use_bf16_inference(),
+            "nf4_quantization": is_cuda and get_gpu_use_nf4_quantization(),
+            "torch_compile": is_cuda and get_gpu_use_torch_compile(),
             "bitsandbytes_available": BNB_AVAILABLE,
         },
     }
@@ -312,7 +316,7 @@ def load_model() -> bool:
         bool: True if the model was loaded successfully, False otherwise.
     """
     global chatterbox_model, MODEL_LOADED, model_device
-    global loaded_model_type, loaded_model_class_name
+    global loaded_model_type, loaded_model_class_name, _use_bf16_inference
 
     if MODEL_LOADED:
         logger.info("TTS model is already loaded.")
@@ -377,9 +381,9 @@ def load_model() -> bool:
         model_device = resolved_device_str
         logger.info(f"Final device selection: {model_device}")
 
-        # Apply Ampere GPU optimizations (TF32, cuDNN benchmark) before model loading
+        # Apply CUDA GPU optimizations (TF32, cuDNN benchmark) before model loading
         if model_device == "cuda":
-            _apply_ampere_optimizations()
+            _apply_cuda_optimizations()
 
         # Get the model selector from config
         model_selector = config_manager.get_string(
@@ -451,6 +455,8 @@ def load_model() -> bool:
             return False
 
         MODEL_LOADED = True
+        # Cache BF16 inference flag to avoid per-call config lookups
+        _use_bf16_inference = model_device == "cuda" and get_gpu_use_bf16_inference()
         if chatterbox_model:
             logger.info(
                 f"TTS Model loaded successfully on {model_device}. Engine sample rate: {chatterbox_model.sr} Hz."
@@ -519,10 +525,7 @@ def synthesize(
         )
 
         # Call the core model's generate method, with optional BF16 autocast for Ampere GPUs
-        use_bf16 = (
-            model_device == "cuda" and get_gpu_use_bf16_inference()
-        )
-        if use_bf16:
+        if _use_bf16_inference:
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 wav_tensor = chatterbox_model.generate(
                     text=text,

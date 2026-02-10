@@ -109,6 +109,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "cudnn_benchmark": True,  # Enable cuDNN auto-tuner (best for fixed input sizes).
         "use_bf16_inference": True,  # Use bfloat16 autocast during inference (Ampere native).
         "use_nf4_quantization": False,  # Quantize model linear layers to NF4 4-bit via bitsandbytes.
+        "nf4_min_features": 128,  # Minimum layer width to quantize (skip tiny layers).
         "use_torch_compile": False,  # Apply torch.compile for JIT graph optimizations.
     },
 }
