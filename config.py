@@ -104,6 +104,14 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "debug": {  # Settings for debugging purposes
         "save_intermediate_audio": False  # If true, save intermediate audio files for debugging
     },
+    "gpu_optimizations": {  # GPU-specific performance tuning (Ampere+ GPUs like RTX 3090)
+        "enable_tf32": True,  # Enable TF32 tensor cores on Ampere+ for ~3x faster matmul.
+        "cudnn_benchmark": True,  # Enable cuDNN auto-tuner (best for fixed input sizes).
+        "use_bf16_inference": True,  # Use bfloat16 autocast during inference (Ampere native).
+        "use_nf4_quantization": False,  # Quantize model linear layers to NF4 4-bit via bitsandbytes.
+        "nf4_min_features": 128,  # Minimum layer width to quantize (skip tiny layers).
+        "use_torch_compile": False,  # Apply torch.compile for JIT graph optimizations.
+    },
 }
 
 
@@ -883,6 +891,47 @@ def get_ui_title() -> str:
     """Returns the title for the web UI."""
     return config_manager.get_string(
         "ui.title", _get_default_from_structure("ui.title")
+    )
+
+
+# GPU Optimization Settings Accessors
+def get_gpu_enable_tf32() -> bool:
+    """Returns whether TF32 is enabled for Ampere+ GPUs."""
+    return config_manager.get_bool(
+        "gpu_optimizations.enable_tf32",
+        _get_default_from_structure("gpu_optimizations.enable_tf32"),
+    )
+
+
+def get_gpu_cudnn_benchmark() -> bool:
+    """Returns whether cuDNN benchmark mode is enabled."""
+    return config_manager.get_bool(
+        "gpu_optimizations.cudnn_benchmark",
+        _get_default_from_structure("gpu_optimizations.cudnn_benchmark"),
+    )
+
+
+def get_gpu_use_bf16_inference() -> bool:
+    """Returns whether bfloat16 autocast is used during inference."""
+    return config_manager.get_bool(
+        "gpu_optimizations.use_bf16_inference",
+        _get_default_from_structure("gpu_optimizations.use_bf16_inference"),
+    )
+
+
+def get_gpu_use_nf4_quantization() -> bool:
+    """Returns whether NF4 4-bit quantization is enabled."""
+    return config_manager.get_bool(
+        "gpu_optimizations.use_nf4_quantization",
+        _get_default_from_structure("gpu_optimizations.use_nf4_quantization"),
+    )
+
+
+def get_gpu_use_torch_compile() -> bool:
+    """Returns whether torch.compile is applied to the model."""
+    return config_manager.get_bool(
+        "gpu_optimizations.use_torch_compile",
+        _get_default_from_structure("gpu_optimizations.use_torch_compile"),
     )
 
 

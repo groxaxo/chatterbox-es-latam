@@ -6,6 +6,7 @@ import logging
 import random
 import numpy as np
 import torch
+import torch.nn as nn
 from typing import Optional, Tuple
 from pathlib import Path
 
@@ -23,8 +24,24 @@ except ImportError:
     ChatterboxTurboTTS = None
     TURBO_AVAILABLE = False
 
+# Defensive bitsandbytes import for NF4 quantization
+try:
+    import bitsandbytes as bnb
+
+    BNB_AVAILABLE = True
+except ImportError:
+    bnb = None
+    BNB_AVAILABLE = False
+
 # Import the singleton config_manager
-from config import config_manager
+from config import (
+    config_manager,
+    get_gpu_enable_tf32,
+    get_gpu_cudnn_benchmark,
+    get_gpu_use_bf16_inference,
+    get_gpu_use_nf4_quantization,
+    get_gpu_use_torch_compile,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +50,81 @@ if TURBO_AVAILABLE:
     logger.info("ChatterboxTurboTTS is available in the installed chatterbox package.")
 else:
     logger.info("ChatterboxTurboTTS not available in installed chatterbox package.")
+
+if BNB_AVAILABLE:
+    logger.info("bitsandbytes is available for NF4 quantization.")
+else:
+    logger.info("bitsandbytes not installed. NF4 quantization unavailable.")
+
+
+def _apply_cuda_optimizations():
+    """
+    Applies GPU optimizations for CUDA devices.
+    TF32 provides ~3x speedup on Ampere+ (compute capability >= 8.0, e.g. RTX 3090).
+    On older architectures, TF32 flags are safely ignored.
+    """
+    if not torch.cuda.is_available():
+        return
+
+    # TF32 - provides ~3x speedup for float32 matmuls on Ampere+ with minimal precision loss
+    if get_gpu_enable_tf32():
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        logger.info("Enabled TF32 tensor cores for Ampere+ GPU acceleration.")
+
+    # cuDNN benchmark - auto-tunes convolution algorithms for consistent input sizes
+    if get_gpu_cudnn_benchmark():
+        torch.backends.cudnn.benchmark = True
+        logger.info("Enabled cuDNN benchmark mode for convolution auto-tuning.")
+
+
+def _quantize_model_nf4(model):
+    """
+    Replaces nn.Linear layers in the model with bitsandbytes Linear4bit (NF4)
+    to reduce VRAM usage by ~4x while preserving quality.
+
+    Only quantizes layers that are large enough to benefit.
+    """
+    if not BNB_AVAILABLE:
+        logger.warning(
+            "NF4 quantization requested but bitsandbytes is not installed. "
+            "Install with: pip install bitsandbytes>=0.42.0"
+        )
+        return model
+
+    device = next(model.parameters()).device
+    quantized_count = 0
+    # Skip tiny layers where quantization overhead outweighs VRAM savings
+    min_features = config_manager.get_int("gpu_optimizations.nf4_min_features", 128)
+
+    for name, module in list(model.named_modules()):
+        for child_name, child in list(module.named_children()):
+            if isinstance(child, nn.Linear):
+                if child.in_features < min_features or child.out_features < min_features:
+                    continue
+
+                has_bias = child.bias is not None
+                nf4_layer = bnb.nn.Linear4bit(
+                    child.in_features,
+                    child.out_features,
+                    bias=has_bias,
+                    compute_dtype=torch.bfloat16,
+                    quant_type="nf4",
+                )
+                nf4_layer.weight = bnb.nn.Params4bit(
+                    child.weight.data,
+                    requires_grad=False,
+                    quant_type="nf4",
+                )
+                if has_bias:
+                    nf4_layer.bias = child.bias
+
+                nf4_layer = nf4_layer.to(device)
+                setattr(module, child_name, nf4_layer)
+                quantized_count += 1
+
+    logger.info(f"NF4 quantization applied to {quantized_count} linear layers.")
+    return model
 
 # Model selector whitelist - maps config values to model types
 MODEL_SELECTOR_MAP = {
@@ -68,6 +160,7 @@ MODEL_LOADED: bool = False
 model_device: Optional[str] = (
     None  # Stores the resolved device string ('cuda' or 'cpu')
 )
+_use_bf16_inference: bool = False  # Cached BF16 inference flag, set during model loading
 
 # Track which model type is loaded
 loaded_model_type: Optional[str] = None  # "original", "turbo", or "custom"
@@ -189,6 +282,7 @@ def get_model_info() -> dict:
     Returns:
         Dictionary containing model information
     """
+    is_cuda = model_device == "cuda"
     return {
         "loaded": MODEL_LOADED,
         "type": loaded_model_type,  # "original", "turbo", or "custom"
@@ -200,6 +294,14 @@ def get_model_info() -> dict:
             TURBO_PARALINGUISTIC_TAGS if loaded_model_type == "turbo" else []
         ),
         "turbo_available_in_package": TURBO_AVAILABLE,
+        "gpu_optimizations": {
+            "tf32_enabled": is_cuda and get_gpu_enable_tf32(),
+            "cudnn_benchmark": is_cuda and get_gpu_cudnn_benchmark(),
+            "bf16_inference": is_cuda and get_gpu_use_bf16_inference(),
+            "nf4_quantization": is_cuda and get_gpu_use_nf4_quantization(),
+            "torch_compile": is_cuda and get_gpu_use_torch_compile(),
+            "bitsandbytes_available": BNB_AVAILABLE,
+        },
     }
 
 
@@ -214,7 +316,7 @@ def load_model() -> bool:
         bool: True if the model was loaded successfully, False otherwise.
     """
     global chatterbox_model, MODEL_LOADED, model_device
-    global loaded_model_type, loaded_model_class_name
+    global loaded_model_type, loaded_model_class_name, _use_bf16_inference
 
     if MODEL_LOADED:
         logger.info("TTS model is already loaded.")
@@ -279,6 +381,10 @@ def load_model() -> bool:
         model_device = resolved_device_str
         logger.info(f"Final device selection: {model_device}")
 
+        # Apply CUDA GPU optimizations (TF32, cuDNN benchmark) before model loading
+        if model_device == "cuda":
+            _apply_cuda_optimizations()
+
         # Get the model selector from config
         model_selector = config_manager.get_string(
             "model.repo_id", "chatterbox-es-latam"
@@ -302,6 +408,28 @@ def load_model() -> bool:
             # Load the model using from_pretrained - handles HuggingFace downloads automatically
             # For custom models, the repo_id should be the actual HuggingFace repo or local path
             chatterbox_model = model_class.from_pretrained(device=model_device)
+
+            # Apply NF4 quantization if enabled (reduces VRAM ~4x on CUDA)
+            if model_device == "cuda" and get_gpu_use_nf4_quantization():
+                logger.info("Applying NF4 4-bit quantization to model...")
+                _quantize_model_nf4(chatterbox_model)
+
+            # Apply torch.compile if enabled (PyTorch 2.x JIT optimization)
+            if model_device == "cuda" and get_gpu_use_torch_compile():
+                try:
+                    if hasattr(chatterbox_model, "t3") and hasattr(
+                        chatterbox_model.t3, "tfmr"
+                    ):
+                        chatterbox_model.t3.tfmr = torch.compile(
+                            chatterbox_model.t3.tfmr
+                        )
+                        logger.info(
+                            "Applied torch.compile to transformer backbone."
+                        )
+                except Exception as e_compile:
+                    logger.warning(
+                        f"torch.compile failed (non-fatal): {e_compile}"
+                    )
 
             # Store model metadata
             loaded_model_type = model_type
@@ -327,6 +455,8 @@ def load_model() -> bool:
             return False
 
         MODEL_LOADED = True
+        # Cache BF16 inference flag to avoid per-call config lookups
+        _use_bf16_inference = model_device == "cuda" and get_gpu_use_bf16_inference()
         if chatterbox_model:
             logger.info(
                 f"TTS Model loaded successfully on {model_device}. Engine sample rate: {chatterbox_model.sr} Hz."
@@ -394,14 +524,24 @@ def synthesize(
             f"exag={exaggeration}, cfg_weight={cfg_weight}, seed_applied_globally_if_nonzero={seed}"
         )
 
-        # Call the core model's generate method
-        wav_tensor = chatterbox_model.generate(
-            text=text,
-            audio_prompt_path=audio_prompt_path,
-            temperature=temperature,
-            exaggeration=exaggeration,
-            cfg_weight=cfg_weight,
-        )
+        # Call the core model's generate method, with optional BF16 autocast for Ampere GPUs
+        if _use_bf16_inference:
+            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+                wav_tensor = chatterbox_model.generate(
+                    text=text,
+                    audio_prompt_path=audio_prompt_path,
+                    temperature=temperature,
+                    exaggeration=exaggeration,
+                    cfg_weight=cfg_weight,
+                )
+        else:
+            wav_tensor = chatterbox_model.generate(
+                text=text,
+                audio_prompt_path=audio_prompt_path,
+                temperature=temperature,
+                exaggeration=exaggeration,
+                cfg_weight=cfg_weight,
+            )
 
         # The ChatterboxTTS.generate method already returns a CPU tensor.
         # Convert to numpy array for compatibility with utils.encode_audio

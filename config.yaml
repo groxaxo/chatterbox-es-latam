@@ -15,6 +15,12 @@ tts_engine:
   predefined_voices_path: voices
   reference_audio_path: reference_audio
   default_voice_id: default.wav
+gpu_optimizations:
+  enable_tf32: true           # Use TF32 on Ampere+ GPUs (RTX 3090, A100, etc.)
+  cudnn_benchmark: true       # Enable cuDNN auto-tuner for consistent input sizes
+  use_bf16_inference: true    # Use bfloat16 during inference (Ampere+ native support)
+  use_nf4_quantization: false # Load model weights in NF4 4-bit (requires bitsandbytes)
+  use_torch_compile: false    # Apply torch.compile to the model for JIT optimization
 paths:
   model_cache: model_cache
   output: outputs
