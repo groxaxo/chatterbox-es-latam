@@ -53,7 +53,7 @@ function App() {
 
   const handleDeleteVoice = async (e, id) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this voice?")) return;
+    if (!confirm("¿Estás seguro de que quieres eliminar esta voz?")) return;
     try {
       await api.deleteVoice(id);
       if (selectedVoice?.id === id) setSelectedVoice(null);
@@ -80,7 +80,7 @@ function App() {
   };
 
   const handleDeleteHistory = async (id) => {
-    if (!confirm("Delete this audio?")) return;
+    if (!confirm("¿Eliminar este audio?")) return;
     try {
       await api.deleteHistory(id);
       await loadData();
@@ -98,19 +98,19 @@ function App() {
           className={`nav-item ${activeTab === 'voices' ? 'active' : ''}`}
           onClick={() => setActiveTab('voices')}
         >
-          🎙️ Voices & Inference
+          🎙️ Voces e Inferencia
         </div>
         <div
           className={`nav-item ${activeTab === 'enroll' ? 'active' : ''}`}
           onClick={() => setActiveTab('enroll')}
         >
-          ➕ New Voice
+          ➕ Nueva Voz
         </div>
         <div
           className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
         >
-          📜 History
+          📜 Historial
         </div>
       </div>
 
@@ -119,20 +119,20 @@ function App() {
 
         {activeTab === 'enroll' && (
           <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <h2 className="section-title">Enroll New Voice</h2>
+            <h2 className="section-title">Registrar Nueva Voz</h2>
             <form onSubmit={handleEnroll}>
               <div className="form-group">
-                <label>Voice Name</label>
+                <label>Nombre de la Voz</label>
                 <input
                   type="text"
                   value={enrollName}
                   onChange={(e) => setEnrollName(e.target.value)}
-                  placeholder="e.g. Lionel Messi"
+                  placeholder="ej. Lionel Messi"
                   required
                 />
               </div>
               <div className="form-group">
-                <label>Reference Audio (WAV/MP3)</label>
+                <label>Audio de Referencia (WAV/MP3)</label>
                 <input
                   id="file-upload"
                   type="file"
@@ -141,11 +141,11 @@ function App() {
                   required
                 />
                 <small style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'block' }}>
-                  Upload a clear audio sample (3-10 seconds recommended).
+                  Sube una muestra de audio clara (3-10 segundos recomendado).
                 </small>
               </div>
               <button type="submit" className="primary" disabled={isEnrolling}>
-                {isEnrolling ? "Processing..." : "Enroll Voice"}
+                {isEnrolling ? "Procesando..." : "Registrar Voz"}
               </button>
             </form>
           </div>
@@ -154,7 +154,7 @@ function App() {
         {activeTab === 'voices' && (
           <div className="grid" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem' }}>
             <div>
-              <h2 className="section-title">Voice Library ({voices.length})</h2>
+              <h2 className="section-title">Biblioteca de Voces ({voices.length})</h2>
               <div className="voices-grid">
                 {voices.map(voice => (
                   <div
@@ -175,7 +175,7 @@ function App() {
                       <audio controls src={api.getAudioUrl(`/static/input/${voice.ref_audio_path}`)} />
                     )}
                     <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      Enrollment: {voice.enrollment_time_seconds.toFixed(2)}s
+                      Registro: {voice.enrollment_time_seconds.toFixed(2)}s
                     </div>
                   </div>
                 ))}
@@ -184,41 +184,41 @@ function App() {
 
             {/* Inference Sidebar */}
             <div className="card" style={{ height: 'fit-content', position: 'sticky', top: '2rem' }}>
-              <h2 className="section-title">Inference</h2>
+              <h2 className="section-title">Inferencia</h2>
               {!selectedVoice ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
-                  Select a voice to start
+                  Selecciona una voz para comenzar
                 </div>
               ) : (
                 <>
                   <div className="form-group">
-                    <label>Selected: <span style={{ color: 'var(--accent)' }}>{selectedVoice.name}</span></label>
+                    <label>Seleccionada: <span style={{ color: 'var(--accent)' }}>{selectedVoice.name}</span></label>
                   </div>
                   <div className="form-group">
-                    <label>Text</label>
+                    <label>Texto</label>
                     <textarea
                       rows="6"
                       value={text}
                       onChange={(e) => setText(e.target.value)}
-                      placeholder="Type something..."
+                      placeholder="Escribe algo..."
                     />
                   </div>
                   <button className="primary" onClick={handleInfer} disabled={isInferring || !text}>
-                    {isInferring ? "Generating..." : "Generate Audio"}
+                    {isInferring ? "Generando..." : "Generar Audio"}
                   </button>
 
                   {inferenceResult && (
                     <div className="result-grid">
                       <div className="result-box">
                         <div className="result-header">
-                          <span className="label-lora">LoRA (Fine-Tuned)</span>
+                          <span className="label-lora">LoRA (Ajustado)</span>
                           <span className="badge">{inferenceResult.inference_time_lora.toFixed(2)}s</span>
                         </div>
                         <audio controls autoPlay src={api.getAudioUrl(inferenceResult.audio_url_lora)} style={{ width: '100%' }} />
                       </div>
                       <div className="result-box">
                         <div className="result-header">
-                          <span className="label-base">Base Model</span>
+                          <span className="label-base">Modelo Base</span>
                           <span className="badge">{inferenceResult.inference_time_base.toFixed(2)}s</span>
                         </div>
                         <audio controls src={api.getAudioUrl(inferenceResult.audio_url_base)} style={{ width: '100%' }} />
@@ -233,14 +233,14 @@ function App() {
 
         {activeTab === 'history' && (
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <h2 className="section-title">Inference History</h2>
+            <h2 className="section-title">Historial de Inferencias</h2>
             {history.map(item => (
               <div key={item.id} className="history-item">
                 <div className="history-info">
                   <div className="history-text">"{item.text}"</div>
                   <div className="history-meta">
                     <span>📅 {new Date(item.created_at).toLocaleString()}</span>
-                    <span>🗣️ {voices.find(v => v.id === item.voice_id)?.name || 'Unknown'}</span>
+                    <span>🗣️ {voices.find(v => v.id === item.voice_id)?.name || 'Desconocido'}</span>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
@@ -262,7 +262,7 @@ function App() {
             ))}
             {history.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
-                No history yet.
+                Sin historial aún.
               </div>
             )}
           </div>
