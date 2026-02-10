@@ -56,6 +56,12 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MAX_TEXT_LENGTH = 1000
 VALIDATION_SPLIT = 0.1
 
+# Apply Ampere GPU optimizations when running on CUDA
+if DEVICE == "cuda":
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+    torch.backends.cudnn.benchmark = True
+
 # Metrics tracking class
 class MetricsTracker:
     def __init__(self, save_path="training_metrics.png", update_interval=2.0):
@@ -576,7 +582,7 @@ def compute_loss(
     
     # Forward through transformer
     if DEVICE == 'cuda':
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast("cuda"):
             hidden_states = model.t3.tfmr(inputs_embeds=embeds)[0]
     else:
         hidden_states = model.t3.tfmr(inputs_embeds=embeds)[0]
@@ -721,7 +727,7 @@ def main():
     # Training loop
     print("Starting training...")
     global_step = 0
-    scaler = torch.cuda.amp.GradScaler() if DEVICE == 'cuda' else None
+    scaler = torch.amp.GradScaler("cuda") if DEVICE == 'cuda' else None
     
     for epoch in range(EPOCHS):
         # Training
