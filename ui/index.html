@@ -283,11 +283,18 @@
                                 <td><strong>~5×</strong></td>
                                 <td>~15s</td>
                             </tr>
+                            <tr class="bench-row-nf4">
+                                <td>🧪 GPU + NF4 (experimental)</td>
+                                <td>~29s</td>
+                                <td><strong>~1.4×–2.0×</strong></td>
+                                <td>~5–6s</td>
+                            </tr>
                         </tbody>
                     </table>
                     <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.5rem;">
                         Medido a partir de 32 solicitudes reales · carga desde caché HuggingFace<br>
-                        VRAM inactiva: <strong>0 MB</strong> (modelo se duerme tras 5 min de inactividad)
+                        VRAM inactiva: <strong>0 MB</strong> (modelo se duerme tras 5 min de inactividad)<br>
+                        NF4 reduce VRAM, pero en este modelo fue más lento y con peor correlación Whisper.
                     </p>
                 </div>
             </div>

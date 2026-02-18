@@ -428,6 +428,7 @@ textarea:focus,
 }
 .bench-row-gpu td { color: #2ecc71; }
 .bench-row-cpu td { color: var(--text-secondary); }
+.bench-row-nf4 td { color: #f39c12; }
 
 /* Footer */
 .footer {

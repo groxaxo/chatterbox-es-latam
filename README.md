@@ -229,6 +229,21 @@ Python 3.10+ (para desarrollo)
 
 El servidor entra en modo dormido automáticamente tras **5 minutos** sin solicitudes (`idle_timeout_sec` en `config.yaml`).
 
+### NF4 (bitsandbytes) — análisis real en este proyecto
+
+| Escenario | VRAM asignada | RTF (menor es mejor) | Estado |
+|-----------|----------------|----------------------|--------|
+| FP16/BF16 (default) | ~2.99 GB | **~0.79 – 0.87** | Recomendado |
+| NF4 (678 capas cuantizadas) | ~0.60 GB | ~1.42 – 1.97 | Solo si falta VRAM |
+
+**Conclusión práctica**:
+- ✅ NF4 **sí funciona** técnicamente en este repo (cuantiza 678 capas con bitsandbytes).
+- ✅ Reduce fuertemente VRAM activa (~80% menos asignada).
+- ⚠️ En nuestras pruebas, **empeora latencia/RTF** frente al modo FP16/BF16.
+- ⚠️ Correlación de transcripción con Whisper (DeepInfra) fue menor en NF4 que en FP16.
+
+Por defecto, `gpu_optimizations.use_nf4_quantization` se mantiene en `false` para priorizar calidad/latencia.
+
 ---
 
 ## 📁 Estructura

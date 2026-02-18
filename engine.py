@@ -93,16 +93,42 @@ def _quantize_model_nf4(model):
             "NF4 quantization requested but bitsandbytes is not installed. "
             "Install with: pip install bitsandbytes>=0.42.0"
         )
-        return model
+        return 0
 
-    device = next(model.parameters()).device
+    # ChatterboxTTS may be a composite object, not an nn.Module root.
+    model_roots = []
+    if isinstance(model, nn.Module):
+        model_roots.append(model)
+    else:
+        for attr_val in vars(model).values():
+            if isinstance(attr_val, nn.Module):
+                model_roots.append(attr_val)
+
+    if not model_roots:
+        raise TypeError(
+            "NF4 quantization could not find any nn.Module roots in chatterbox model."
+        )
+
     quantized_count = 0
     # Skip tiny layers where quantization overhead outweighs VRAM savings
     min_features = config_manager.get_int("gpu_optimizations.nf4_min_features", 128)
+    compute_dtype = (
+        torch.bfloat16
+        if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+        else torch.float16
+    )
 
-    for name, module in list(model.named_modules()):
-        for child_name, child in list(module.named_children()):
-            if isinstance(child, nn.Linear):
+    visited_modules = set()
+    for root in model_roots:
+        for module in list(root.modules()):
+            module_id = id(module)
+            if module_id in visited_modules:
+                continue
+            visited_modules.add(module_id)
+
+            for child_name, child in list(module.named_children()):
+                if not isinstance(child, nn.Linear):
+                    continue
                 if child.in_features < min_features or child.out_features < min_features:
                     continue
 
@@ -111,7 +137,7 @@ def _quantize_model_nf4(model):
                     child.in_features,
                     child.out_features,
                     bias=has_bias,
-                    compute_dtype=torch.bfloat16,
+                    compute_dtype=compute_dtype,
                     quant_type="nf4",
                 )
                 nf4_layer.weight = bnb.nn.Params4bit(
@@ -122,12 +148,12 @@ def _quantize_model_nf4(model):
                 if has_bias:
                     nf4_layer.bias = child.bias
 
-                nf4_layer = nf4_layer.to(device)
+                nf4_layer = nf4_layer.to(child.weight.device)
                 setattr(module, child_name, nf4_layer)
                 quantized_count += 1
 
     logger.info(f"NF4 quantization applied to {quantized_count} linear layers.")
-    return model
+    return quantized_count
 
 # Model selector whitelist - maps config values to model types
 MODEL_SELECTOR_MAP = {
@@ -168,6 +194,7 @@ _use_bf16_inference: bool = False  # Cached BF16 inference flag, set during mode
 # Track which model type is loaded
 loaded_model_type: Optional[str] = None  # "original", "turbo", or "custom"
 loaded_model_class_name: Optional[str] = None  # "ChatterboxTTS" or "ChatterboxTurboTTS"
+_nf4_quantized_layers: int = 0  # Number of Linear4bit layers currently active
 
 # Idle sleep state
 _model_lock: threading.RLock = threading.RLock()
@@ -307,6 +334,8 @@ def get_model_info() -> dict:
             "cudnn_benchmark": is_cuda and get_gpu_cudnn_benchmark(),
             "bf16_inference": is_cuda and get_gpu_use_bf16_inference(),
             "nf4_quantization": is_cuda and get_gpu_use_nf4_quantization(),
+            "nf4_quantized_layers": _nf4_quantized_layers,
+            "nf4_active": _nf4_quantized_layers > 0,
             "torch_compile": is_cuda and get_gpu_use_torch_compile(),
             "bitsandbytes_available": BNB_AVAILABLE,
         },
@@ -332,7 +361,7 @@ def sleep_model() -> None:
     Offloads the model from VRAM to CPU and clears the CUDA cache.
     No-op if not on CUDA, not loaded, or already sleeping.
     """
-    global _model_on_cpu
+    global _model_on_cpu, chatterbox_model, MODEL_LOADED, _nf4_quantized_layers
     with _model_lock:
         if not MODEL_LOADED or chatterbox_model is None or _model_on_cpu:
             return
@@ -344,7 +373,19 @@ def sleep_model() -> None:
         except Exception as e:
             logger.warning(
                 f"Could not move model to CPU (NF4 layers may require CUDA): {e}. "
-                "Skipping sleep."
+                "Falling back to full model unload for sleep."
+            )
+            # Fallback path: fully unload model so VRAM can still be reclaimed.
+            if chatterbox_model is not None:
+                del chatterbox_model
+                chatterbox_model = None
+            MODEL_LOADED = False
+            _model_on_cpu = False
+            _nf4_quantized_layers = 0
+            gc.collect()
+            torch.cuda.empty_cache()
+            logger.info(
+                "Model unloaded from GPU memory. Next request will lazy-reload model."
             )
             return
         gc.collect()
@@ -399,6 +440,7 @@ def load_model() -> bool:
     """
     global chatterbox_model, MODEL_LOADED, model_device
     global loaded_model_type, loaded_model_class_name, _use_bf16_inference
+    global _model_on_cpu, _nf4_quantized_layers
 
     if MODEL_LOADED:
         logger.info("TTS model is already loaded.")
@@ -525,7 +567,13 @@ def load_model() -> bool:
             # Apply NF4 quantization if enabled (reduces VRAM ~4x on CUDA)
             if model_device == "cuda" and get_gpu_use_nf4_quantization():
                 logger.info("Applying NF4 4-bit quantization to model...")
-                _quantize_model_nf4(chatterbox_model)
+                _nf4_quantized_layers = _quantize_model_nf4(chatterbox_model)
+                if _nf4_quantized_layers == 0:
+                    logger.warning(
+                        "NF4 was enabled but no eligible Linear layers were quantized."
+                    )
+            else:
+                _nf4_quantized_layers = 0
 
             # Apply torch.compile if enabled (PyTorch 2.x JIT optimization)
             if model_device == "cuda" and get_gpu_use_torch_compile():
@@ -557,6 +605,7 @@ def load_model() -> bool:
             )
             chatterbox_model = None
             MODEL_LOADED = False
+            _nf4_quantized_layers = 0
             return False
         except Exception as e_hf:
             logger.error(
@@ -565,9 +614,11 @@ def load_model() -> bool:
             )
             chatterbox_model = None
             MODEL_LOADED = False
+            _nf4_quantized_layers = 0
             return False
 
         MODEL_LOADED = True
+        _model_on_cpu = False
         # Cache BF16 inference flag to avoid per-call config lookups
         _use_bf16_inference = model_device == "cuda" and get_gpu_use_bf16_inference()
         if chatterbox_model:
@@ -579,6 +630,7 @@ def load_model() -> bool:
                 "Model loading sequence completed, but chatterbox_model is None. This indicates an unexpected issue."
             )
             MODEL_LOADED = False
+            _nf4_quantized_layers = 0
             return False
 
         return True
@@ -589,6 +641,7 @@ def load_model() -> bool:
         )
         chatterbox_model = None
         MODEL_LOADED = False
+        _nf4_quantized_layers = 0
         return False
 
 
@@ -721,7 +774,9 @@ def reload_model() -> bool:
         MODEL_LOADED, \
         model_device, \
         loaded_model_type, \
-        loaded_model_class_name
+        loaded_model_class_name, \
+        _model_on_cpu, \
+        _nf4_quantized_layers
 
     logger.info("Initiating model hot-swap/reload sequence...")
 
@@ -735,6 +790,8 @@ def reload_model() -> bool:
     MODEL_LOADED = False
     loaded_model_type = None
     loaded_model_class_name = None
+    _model_on_cpu = False
+    _nf4_quantized_layers = 0
 
     # 3. Force Python Garbage Collection
     gc.collect()
