@@ -4,6 +4,7 @@
 import gc
 import logging
 import random
+import inspect
 import numpy as np
 import torch
 import torch.nn as nn
@@ -405,9 +406,40 @@ def load_model() -> bool:
                     f"Turbo model supports paralinguistic tags: {TURBO_PARALINGUISTIC_TAGS}"
                 )
 
-            # Load the model using from_pretrained - handles HuggingFace downloads automatically
-            # For custom models, the repo_id should be the actual HuggingFace repo or local path
-            chatterbox_model = model_class.from_pretrained(device=model_device)
+            # Resolve well-known aliases to explicit HuggingFace repo IDs.
+            selector_normalized = model_selector.lower().strip()
+            repo_aliases = {
+                "chatterbox": "ResembleAI/chatterbox",
+                "original": "ResembleAI/chatterbox",
+                "resembleai/chatterbox": "ResembleAI/chatterbox",
+                "chatterbox-turbo": "ResembleAI/chatterbox-turbo",
+                "turbo": "ResembleAI/chatterbox-turbo",
+                "resembleai/chatterbox-turbo": "ResembleAI/chatterbox-turbo",
+            }
+            resolved_repo_id = repo_aliases.get(selector_normalized, model_selector)
+            logger.info(f"Resolved model repo/path for loading: '{resolved_repo_id}'")
+
+            # Load from_pretrained, passing repo/path only when the installed API supports it.
+            pretrained_signature = inspect.signature(model_class.from_pretrained)
+            if "repo_id" in pretrained_signature.parameters:
+                chatterbox_model = model_class.from_pretrained(
+                    device=model_device, repo_id=resolved_repo_id
+                )
+            elif "pretrained_model_name_or_path" in pretrained_signature.parameters:
+                chatterbox_model = model_class.from_pretrained(
+                    device=model_device,
+                    pretrained_model_name_or_path=resolved_repo_id,
+                )
+            elif "model_id" in pretrained_signature.parameters:
+                chatterbox_model = model_class.from_pretrained(
+                    device=model_device, model_id=resolved_repo_id
+                )
+            else:
+                logger.warning(
+                    "from_pretrained does not accept repo/path selection in this chatterbox version; "
+                    "loading default pretrained weights."
+                )
+                chatterbox_model = model_class.from_pretrained(device=model_device)
 
             # Apply NF4 quantization if enabled (reduces VRAM ~4x on CUDA)
             if model_device == "cuda" and get_gpu_use_nf4_quantization():

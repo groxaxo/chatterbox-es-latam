@@ -211,6 +211,15 @@ except RuntimeError as e:
 templates = Jinja2Templates(directory=str(ui_static_path))
 
 
+@app.get("/", include_in_schema=False)
+async def root_ui():
+    """Serve the main UI from the server root path."""
+    index_file = ui_static_path / "index.html"
+    if not index_file.exists():
+        raise HTTPException(status_code=404, detail="UI index file not found")
+    return FileResponse(index_file)
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -365,13 +374,39 @@ async def custom_tts(request: CustomTTSRequest):
         else get_gen_default_language(),
     }
 
-    # Generate audio
-    audio_array, sample_rate = engine.generate(
-        text=request.text, voice_source_path=str(voice_path), **params
-    )
+    # Generate audio (single pass or chunked by sentence boundaries)
+    text_chunks = [request.text]
+    if request.split_text:
+        chunk_size = request.chunk_size if request.chunk_size is not None else 120
+        chunked_text = utils.chunk_text_by_sentences(request.text, chunk_size)
+        if chunked_text:
+            text_chunks = chunked_text
+        logger.info(
+            f"Chunking enabled: generated {len(text_chunks)} chunk(s) with chunk_size={chunk_size}"
+        )
 
-    if audio_array is None:
-        raise HTTPException(status_code=500, detail="Audio generation failed")
+    generated_chunks = []
+    sample_rate = None
+    for chunk in text_chunks:
+        chunk_audio, chunk_sample_rate = engine.generate(
+            text=chunk, voice_source_path=str(voice_path), **params
+        )
+        if chunk_audio is None:
+            raise HTTPException(status_code=500, detail="Audio generation failed")
+        if sample_rate is None:
+            sample_rate = chunk_sample_rate
+        elif chunk_sample_rate != sample_rate:
+            raise HTTPException(
+                status_code=500,
+                detail="Audio generation failed due to sample rate mismatch across chunks",
+            )
+        generated_chunks.append(np.asarray(chunk_audio).squeeze())
+
+    audio_array = (
+        generated_chunks[0]
+        if len(generated_chunks) == 1
+        else np.concatenate(generated_chunks)
+    )
 
     # Encode audio
     output_format = (
