@@ -5,6 +5,8 @@ import gc
 import logging
 import random
 import inspect
+import threading
+import time
 import numpy as np
 import torch
 import torch.nn as nn
@@ -167,6 +169,11 @@ _use_bf16_inference: bool = False  # Cached BF16 inference flag, set during mode
 loaded_model_type: Optional[str] = None  # "original", "turbo", or "custom"
 loaded_model_class_name: Optional[str] = None  # "ChatterboxTTS" or "ChatterboxTurboTTS"
 
+# Idle sleep state
+_model_lock: threading.RLock = threading.RLock()
+_model_on_cpu: bool = False  # True when model has been offloaded to CPU to free VRAM
+last_request_time: float = 0.0  # Epoch seconds of last TTS generate() call
+
 
 def set_seed(seed_value: int):
     """
@@ -303,7 +310,81 @@ def get_model_info() -> dict:
             "torch_compile": is_cuda and get_gpu_use_torch_compile(),
             "bitsandbytes_available": BNB_AVAILABLE,
         },
+        "sleeping": _model_on_cpu,
     }
+
+
+def _move_model_to_device(target_device: str) -> None:
+    """Moves all nn.Module components of chatterbox_model to target_device."""
+    if chatterbox_model is None:
+        return
+    if isinstance(chatterbox_model, torch.nn.Module):
+        chatterbox_model.to(target_device)
+        return
+    # Fallback: iterate attributes for composite model objects
+    for attr_val in vars(chatterbox_model).values():
+        if isinstance(attr_val, torch.nn.Module):
+            attr_val.to(target_device)
+
+
+def sleep_model() -> None:
+    """
+    Offloads the model from VRAM to CPU and clears the CUDA cache.
+    No-op if not on CUDA, not loaded, or already sleeping.
+    """
+    global _model_on_cpu
+    with _model_lock:
+        if not MODEL_LOADED or chatterbox_model is None or _model_on_cpu:
+            return
+        if model_device != "cuda":
+            return
+        logger.info("Idle timeout reached — offloading model to CPU to free VRAM...")
+        try:
+            _move_model_to_device("cpu")
+        except Exception as e:
+            logger.warning(
+                f"Could not move model to CPU (NF4 layers may require CUDA): {e}. "
+                "Skipping sleep."
+            )
+            return
+        gc.collect()
+        torch.cuda.empty_cache()
+        _model_on_cpu = True
+        logger.info("Model offloaded to CPU. VRAM freed.")
+
+
+def wake_model() -> bool:
+    """
+    Moves the sleeping model back to its original CUDA device.
+    Must be called with _model_lock held (or will re-acquire via ensure_loaded).
+    """
+    global _model_on_cpu
+    if not MODEL_LOADED or chatterbox_model is None:
+        return load_model()
+    if not _model_on_cpu:
+        return True
+    logger.info("Waking model — moving back to %s...", model_device)
+    try:
+        _move_model_to_device(model_device)
+    except Exception as e:
+        logger.error(f"Failed to wake model: {e}", exc_info=True)
+        return False
+    _model_on_cpu = False
+    logger.info("Model back on %s, ready.", model_device)
+    return True
+
+
+def ensure_loaded() -> bool:
+    """
+    Ensures the model is loaded and on the active device.
+    Thread-safe: lazy-loads on first call, wakes from CPU sleep on subsequent calls.
+    """
+    with _model_lock:
+        if not MODEL_LOADED:
+            return load_model()
+        if _model_on_cpu:
+            return wake_model()
+        return True
 
 
 def load_model() -> bool:
@@ -599,7 +680,16 @@ def generate(
 ) -> Tuple[Optional[torch.Tensor], Optional[int]]:
     """
     Wrapper for synthesize to match server.py expectation.
+    Lazy-loads the model on first call and wakes it from CPU sleep if needed.
     """
+    global last_request_time
+    # Reset idle timer immediately so a concurrent sleep_model() won't fire mid-request
+    last_request_time = time.time()
+
+    if not ensure_loaded():
+        logger.error("Model could not be loaded or woken. Cannot generate audio.")
+        return None, None
+
     wav_tensor, sr = synthesize(
         text=text,
         audio_prompt_path=voice_source_path,

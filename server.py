@@ -4,6 +4,7 @@
 
 import os
 import io
+import asyncio
 import logging
 import logging.handlers
 import shutil
@@ -124,6 +125,26 @@ def _delayed_browser_open(host: str, port: int):
         logger.error(f"Failed to open browser: {e}", exc_info=True)
 
 
+async def _idle_watcher(timeout_sec: int):
+    """Background task: offloads model to CPU after timeout_sec of inactivity."""
+    if timeout_sec <= 0:
+        return
+    poll_interval = min(30, timeout_sec // 2)
+    logger.info(f"Idle watcher started (timeout={timeout_sec}s, poll={poll_interval}s).")
+    while True:
+        await asyncio.sleep(poll_interval)
+        if (
+            engine.MODEL_LOADED
+            and not engine._model_on_cpu
+            and engine.last_request_time > 0
+            and time.time() - engine.last_request_time >= timeout_sec
+        ):
+            logger.info(
+                f"No TTS requests for {timeout_sec}s — sleeping model to free VRAM."
+            )
+            await asyncio.to_thread(engine.sleep_model)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manages application startup and shutdown"""
@@ -143,19 +164,19 @@ async def lifespan(app: FastAPI):
         for p in paths_to_ensure:
             p.mkdir(parents=True, exist_ok=True)
 
-        if not engine.load_model():
-            logger.critical(
-                "CRITICAL: TTS Model failed to load. Server might not function correctly."
-            )
-        else:
-            logger.info("TTS Model loaded successfully.")
-            host_address = get_host()
-            server_port = get_port()
-            browser_thread = threading.Thread(
-                target=lambda: _delayed_browser_open(host_address, server_port),
-                daemon=True,
-            )
-            browser_thread.start()
+        # Lazy load: model loads on first TTS request, not at startup.
+        logger.info("Model will load on first TTS request (lazy load).")
+
+        idle_timeout = config_manager.get_int("tts_engine.idle_timeout_sec", 300)
+        idle_task = asyncio.create_task(_idle_watcher(idle_timeout))
+
+        host_address = get_host()
+        server_port = get_port()
+        browser_thread = threading.Thread(
+            target=lambda: _delayed_browser_open(host_address, server_port),
+            daemon=True,
+        )
+        browser_thread.start()
 
         logger.info("Application startup complete.")
         startup_complete_event.set()
@@ -165,7 +186,7 @@ async def lifespan(app: FastAPI):
         startup_complete_event.set()
         yield
     finally:
-        logger.info("Application shutdown initiated...")
+        idle_task.cancel()
         logger.info("Application shutdown complete.")
 
 
@@ -226,6 +247,7 @@ async def health_check():
     return {
         "status": "healthy",
         "model_loaded": engine.MODEL_LOADED,
+        "model_sleeping": engine._model_on_cpu,
         "device": str(engine.model_device) if engine.model_device else "unknown",
     }
 

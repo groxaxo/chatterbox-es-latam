@@ -15,6 +15,7 @@ tts_engine:
   predefined_voices_path: voices
   reference_audio_path: reference_audio
   default_voice_id: default.wav
+  idle_timeout_sec: 300  # Offload model from VRAM after this many seconds idle (0 = disabled)
 gpu_optimizations:
   enable_tf32: true           # Use TF32 on Ampere+ GPUs (RTX 3090, A100, etc.)
   cudnn_benchmark: true       # Enable cuDNN auto-tuner for consistent input sizes
