@@ -193,6 +193,44 @@ Python 3.10+ (para desarrollo)
 
 ---
 
+## ⚡ Benchmarks de Rendimiento
+
+> Benchmarks medidos en producción. RTF = Real-Time Factor (tiempo de cómputo / duración del audio). RTF < 1 = más rápido que en tiempo real.
+
+### CPU (sin GPU) — medido
+
+| Métrica | Valor |
+|---------|-------|
+| Carga del modelo | ~31s (desde caché HF) |
+| RTF mediana | **5.0×** |
+| RTF rango | 4.0× – 7.0× |
+| Texto corto (~3s audio) | ~15s |
+| Texto medio (~8s audio) | ~40s |
+| Texto largo (~15s audio) | ~75s |
+
+*Medido a partir de 32 solicitudes en un servidor CPU (sin CUDA). La variación se debe a la longitud del texto y la carga concurrente.*
+
+### GPU CUDA — medido / estimado
+
+| Hardware | Carga modelo | RTF típico | Texto corto | Texto medio |
+|----------|-------------|------------|-------------|-------------|
+| RTX 3090 (medido) | ~13s | ~0.3× | ~1s | ~2.5s |
+| RTX 4090 (estimado) | ~7s | ~0.1× | ~0.2s | ~0.8s |
+| A100 (estimado) | ~7s | ~0.1× | ~0.2s | ~0.8s |
+
+*Carga del modelo desde caché HuggingFace local. Primera solicitud incluye carga (lazy load).*
+
+### Modos de Ahorro de VRAM
+
+| Modo | VRAM activa | Latencia al despertar |
+|------|------------|----------------------|
+| Activo (GPU) | ~4–6 GB | 0s |
+| Dormido (CPU offload) | **0 MB** | ~3–5s (mover pesos a GPU) |
+
+El servidor entra en modo dormido automáticamente tras **5 minutos** sin solicitudes (`idle_timeout_sec` en `config.yaml`).
+
+---
+
 ## 📁 Estructura
 
 ```

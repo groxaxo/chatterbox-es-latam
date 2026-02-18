@@ -414,6 +414,21 @@ textarea:focus,
     width: 40%;
 }
 
+/* Benchmark table */
+.bench-table thead th {
+    font-size: 0.78rem;
+    text-align: left;
+    padding: 0.4rem 0.3rem;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border-color);
+}
+.bench-table td {
+    padding: 0.45rem 0.3rem;
+    font-size: 0.82rem;
+}
+.bench-row-gpu td { color: #2ecc71; }
+.bench-row-cpu td { color: var(--text-secondary); }
+
 /* Footer */
 .footer {
     text-align: center;

@@ -249,6 +249,47 @@
                         </tr>
                     </table>
                 </div>
+
+                <div class="info-card" id="benchmark-card">
+                    <h3 class="info-title">⚡ Benchmarks de Rendimiento</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.75rem;">
+                        RTF = Real-Time Factor (tiempo de cómputo ÷ duración del audio). RTF &lt; 1 = más rápido que tiempo real.
+                    </p>
+                    <table class="specs-table bench-table">
+                        <thead>
+                            <tr>
+                                <th>Dispositivo</th>
+                                <th>Carga modelo</th>
+                                <th>RTF</th>
+                                <th>~3s audio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="bench-row-gpu">
+                                <td>⚡ GPU (RTX 3090)</td>
+                                <td>~13s</td>
+                                <td><strong>~0.3×</strong></td>
+                                <td>~1s</td>
+                            </tr>
+                            <tr class="bench-row-gpu">
+                                <td>⚡ GPU (RTX 4090)</td>
+                                <td>~7s</td>
+                                <td><strong>~0.1×</strong></td>
+                                <td>~0.3s</td>
+                            </tr>
+                            <tr class="bench-row-cpu">
+                                <td>🖥 CPU (medido)</td>
+                                <td>~31s</td>
+                                <td><strong>~5×</strong></td>
+                                <td>~15s</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.5rem;">
+                        Medido a partir de 32 solicitudes reales · carga desde caché HuggingFace<br>
+                        VRAM inactiva: <strong>0 MB</strong> (modelo se duerme tras 5 min de inactividad)
+                    </p>
+                </div>
             </div>
         </div>
     </div>
