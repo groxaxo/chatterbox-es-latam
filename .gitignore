@@ -44,10 +44,6 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
-# ONNX models (large)
-*.onnx
-models/
-
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb

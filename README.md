@@ -2,100 +2,85 @@
 
 <div align="center">
 
-![Chatterbox ES-LATAM Banner](https://img.shields.io/badge/Chatterbox-ES--LATAM-orange?style=for-the-badge&logo=google-assistant&logoColor=white)
-
 **Sistema de Síntesis de Voz (TTS) para Español Latinoamericano**
 
-*Servidor TTS avanzado con API compatible OpenAI, interfaz web moderna y voces expresivas*
+*Servidor TTS avanzado con API compatible OpenAI e interfaz web moderna*
 
-*Optimizado para aplicaciones de Comunicación Aumentativa Alternativa (AAC)*
-
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg?style=flat-square)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg?style=flat-square)](https://fastapi.tiangolo.com)
-[![Docker](https://img.shields.io/badge/Docker-CUDA_12.1-blue.svg?style=flat-square)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com)
+[![Docker](https://img.shields.io/badge/Docker-CUDA_12.1-blue.svg)](https://www.docker.com/)
 
 </div>
 
 ---
 
-## 🎯 Características Principales
+## 🎯 Características
 
-✨ **TTS de Alta Calidad**: Síntesis de voz natural y expresiva optimizada para español latinoamericano
+- ✨ **TTS de Alta Calidad**: Síntesis de voz natural optimizada para español latinoamericano
+- 🎙️ **Clonación de Voz**: Genera audio con voces personalizadas usando muestras de referencia  
+- ⚡ **Rendimiento GPU**: Soporte completo para CUDA (NVIDIA)
+- 🌐 **API Compatible OpenAI**: Endpoint `/v1/audio/speech` compatible con OpenAI
+- 🎨 **Interfaz Web**: UI intuitiva en español con controles avanzados
+- 📝 **Textos Largos**: Procesamiento inteligente con chunking automático
 
-🎙️ **Clonación de Voz**: Genera audio con voces personalizadas usando muestras de referencia
-
-⚡ **Rendimiento GPU**: Soporte completo para CUDA (NVIDIA) con aceleración por GPU
-
-🌐 **API Compatible OpenAI**: Endpoint `/v1/audio/speech` compatible con la API de OpenAI
-
-🎨 **Interfaz Web Moderna**: UI intuitiva en español con controles avanzados
-
-📝 **Textos Largos**: Procesamiento inteligente de textos extensos con chunking automático
-
-🎚️ **Control Fino**: Ajusta temperatura, expresividad, velocidad y más parámetros
+---
 
 ## 🚀 Quick Start
 
-### Opción 1: Docker (Recomendado)
+### Docker (Recomendado)
 
 ```bash
-# Con soporte CUDA (GPU NVIDIA)
-docker build -t chatterbox-es-latam .
-docker run --gpus all -p 8004:8004 chatterbox-es-latam
+# GPU
+docker-compose up -d
 
-# CPU solamente
+# CPU only
 docker build --build-arg RUNTIME=cpu -t chatterbox-es-latam .
 docker run -p 8004:8004 chatterbox-es-latam
 ```
 
-Abre tu navegador en `http://localhost:8004`
+Abre `http://localhost:8004` en tu navegador.
 
-### Opción 2: Instalación Local
+### Instalación Local
 
 ```bash
-# 1. Clonar repositorio
-git clone https://github.com/groxaxo/chatterbox-es-latam.git
+# 1. Clonar
+git clone https://github.com/tu-usuario/chatterbox-es-latam.git
 cd chatterbox-es-latam
 
-# 2. Crear entorno virtual
+# 2. Entorno virtual
 python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+source venv/bin/activate
 
 # 3. Instalar dependencias
-# Para CPU:
-pip install -r requirements.txt
+pip install -r requirements-nvidia.txt  # GPU
+# o
+pip install -r requirements.txt         # CPU
 
-# Para GPU (NVIDIA CUDA):
-pip install -r requirements-nvidia.txt
-
-# 4. Iniciar servidor TTS
+# 4. Iniciar
 python server.py
 ```
 
-El servidor se iniciará en `http://localhost:8004` y abrirá automáticamente tu navegador.
+---
 
-## 📖 Uso del Servidor TTS
+## 🎛️ Uso
 
 ### Interfaz Web
 
-1. Abre `http://localhost:8004` en tu navegador
-2. Escribe el texto que deseas sintetizar
+1. Abre `http://localhost:8004`
+2. Escribe el texto a sintetizar
 3. Selecciona una voz predefinida o sube audio de referencia
-4. Ajusta los parámetros de generación (opcional)
-5. Haz clic en "Generar Audio"
-6. Descarga o reproduce el audio generado
+4. Ajusta parámetros y haz clic en "Generar Audio"
 
 ### API REST
 
-#### OpenAI-Compatible Endpoint
+#### OpenAI-Compatible
 
 ```bash
 curl -X POST http://localhost:8004/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
     "model": "chatterbox-es-latam",
-    "input": "Hola, bienvenido al sistema de síntesis de voz.",
+    "input": "Hola, bienvenido al sistema TTS.",
     "voice": "default.wav",
     "response_format": "mp3",
     "speed": 1.0
@@ -103,13 +88,13 @@ curl -X POST http://localhost:8004/v1/audio/speech \
   --output audio.mp3
 ```
 
-#### Custom TTS Endpoint
+#### Custom Endpoint
 
 ```bash
 curl -X POST http://localhost:8004/tts \
   -H "Content-Type: application/json" \
   -d '{
-    "text": "Este es un ejemplo de síntesis de voz en español latinoamericano.",
+    "text": "Texto a sintetizar en español latinoamericano.",
     "voice_mode": "predefined",
     "predefined_voice_id": "default.wav",
     "temperature": 0.8,
@@ -117,33 +102,174 @@ curl -X POST http://localhost:8004/tts \
     "cfg_weight": 0.5,
     "speed_factor": 1.0,
     "output_format": "wav",
+    "split_text": true,
+    "chunk_size": 120,
     "language": "es"
   }' \
   --output audio.wav
 ```
 
-## 🎛️ Parámetros de Generación
+---
 
-| Parámetro | Rango | Por Defecto | Descripción |
-|-----------|-------|-------------|-------------|
-| `temperature` | 0.0 - 1.5 | 0.8 | Controla aleatoriedad (menor = más estable) |
-| `exaggeration` | 0.25 - 2.0 | 1.0 | Expresividad/dramatización de la voz |
-| `cfg_weight` | 0.2 - 1.0 | 0.5 | Peso de guía (influencia en estilo) |
-| `speed_factor` | 0.25 - 4.0 | 1.0 | Velocidad del audio (1.0 = normal) |
-| `seed` | ≥ 0 | 0 | Semilla para reproducibilidad (0 = aleatorio) |
+## 📋 API Reference
 
-## 📋 Requisitos
+### Endpoints
 
-### Servidor
-- Python 3.10+
-- CUDA 12.1+ (para GPU)
-- 8GB+ VRAM
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/v1/audio/speech` | POST | Generar audio (OpenAI-compatible) |
+| `/tts` | POST | Generar audio (custom) |
+| `/v1/audio/voices` | GET | Listar voces disponibles |
+| `/v1/voices` | GET | Alias para `/v1/audio/voices` |
+| `/v1/audio/models` | GET | Listar modelos disponibles |
+| `/v1/models` | GET | Alias para `/v1/audio/models` |
 
-## 📄 Licencia
+### Parámetros de Generación
 
-Este proyecto está bajo la Licencia MIT - ver [LICENSE](LICENSE) para detalles.
+| Parámetro | Rango | Default | Descripción |
+|-----------|-------|---------|-------------|
+| `temperature` | 0.0 - 1.5 | 0.8 | Aleatoriedad (menor = más estable) |
+| `exaggeration` | 0.25 - 2.0 | 1.0 | Expresividad de la voz |
+| `cfg_weight` | 0.2 - 1.0 | 0.5 | Influencia en estilo |
+| `speed_factor` | 0.25 - 4.0 | 1.0 | Velocidad del audio |
+| `seed` | ≥ 0 | 0 | Semilla para reproducibilidad |
+| `split_text` | boolean | true | Dividir texto largo automáticamente |
+| `chunk_size` | 50 - 500 | 120 | Tamaño de chunk para división de texto |
+| `language` | string | "es" | Idioma del texto |
+
+---
+
+## 🏗️ Arquitectura
+
+```
+┌─────────────────┐         ┌────────────────────────────────┐
+│   CLIENTE       │         │   SERVIDOR (GPU NVIDIA)        │
+│   (Navegador)   │         │                                │
+│                 │  HTTP   │  ┌──────────────────────────┐  │
+│  Envía texto   │────────►│  │  TTS Pipeline            │  │
+│                 │         │  │  1. Recibe texto         │  │
+│  Recibe audio  │◄────────│  │  2. Carga modelo         │  │
+│                 │  WAV    │  │  3. Genera audio (GPU)   │  │
+└─────────────────┘         │  │  4. Retorna audio        │  │
+                            │  └──────────────────────────┘  │
+                            └────────────────────────────────┘
+```
+
+**Stack**:
+- FastAPI (Python)
+- PyTorch + Chatterbox TTS
+- CUDA para GPU
+
+---
+
+## 💻 Requisitos
+
+### Hardware
+
+| Componente | Mínimo | Recomendado |
+|------------|--------|-------------|
+| GPU | RTX 3060 12GB | RTX 4090 / A100 |
+| RAM | 16GB | 32GB |
+| CPU | 4 cores | 8+ cores |
+| Storage | 10GB | 50GB+ |
+
+### Software
+
+```
+Docker 24.0+
+NVIDIA Container Toolkit
+CUDA 12.1+
+Python 3.10+ (para desarrollo)
+```
+
+### Performance (RTX 4090)
+
+| Texto | Latencia |
+|-------|----------|
+| Corto (~10 palabras) | ~200ms |
+| Medio (~50 palabras) | ~800ms |
+| Largo (~200 palabras) | ~3s |
+
+---
+
+## 📁 Estructura
+
+```
+chatterbox-es-latam/
+├── server.py              # Servidor FastAPI principal
+├── engine.py              # Motor de inferencia
+├── config.yaml            # Configuración
+├── requirements.txt       # Dependencias CPU
+├── requirements-nvidia.txt # Dependencias GPU
+├── docker-compose.yml     # Docker Compose
+├── Dockerfile             # Docker build
+├── voices/                # Voces predefinidas
+├── reference_audio/       # Audios de referencia
+├── outputs/               # Audios generados
+├── logs/                  # Logs del servidor
+├── ui/                    # Interfaz web
+├── web/                   # React UI (desarrollo)
+└── training/              # Scripts de fine-tuning
+```
+
+---
+
+## 🐳 Deployment
+
+### Opciones
+
+| Opción | Uso | GPU | Costo |
+|--------|-----|-----|-------|
+| **Local/Docker** | Desarrollo | Opcional | Gratis |
+| **RunPod** | Producción | ✅ | ~$0.20/hr |
+| **AWS/GCP** | Enterprise | ✅ | Variable |
+
+### Docker Compose
+
+```yaml
+services:
+  chatterbox-tts:
+    build: .
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./voices:/app/voices
+      - ./reference_audio:/app/reference_audio
+      - ./outputs:/app/outputs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+```
+
+### RunPod
+
+1. Crear Pod con template PyTorch + CUDA 12.1
+2. GPU: RTX 3090 o superior
+3. Clonar repo e instalar: `pip install -r requirements-nvidia.txt`
+4. Ejecutar: `python server.py`
+
+---
+
+## 🔒 Seguridad
+
+- HTTPS recomendado para producción
+- Rate limiting en endpoints
+- Validación de inputs
+- Audio temporal (no se almacena permanentemente)
+
+---
 
 ## 🙏 Agradecimientos
 
 - [Resemble AI](https://github.com/resemble-ai/chatterbox) por Chatterbox TTS
 
+---
+
+## 📝 Licencia
+
+MIT License

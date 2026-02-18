@@ -51,7 +51,3 @@ pydantic-settings>=2.0.0
 
 # --- GPU Quantization (NF4 / INT8) ---
 bitsandbytes>=0.42.0
-
-# --- ONNX ---
-# onnx>=1.14.0
-# onnxruntime-gpu>=1.16.0  # GPU-enabled ONNX runtime

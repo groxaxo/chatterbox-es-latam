@@ -19,10 +19,7 @@ Para obtener los mejores resultados en la clonación:
 
 ## Uso
 
-Los usuarios pueden subir audio de referencia a través de:
-
-1. **Interfaz Web**: Usar el modo "Clonación de Voz" y subir un archivo
-2. **API**: (próximamente) Endpoint para subir archivos de referencia
+Coloca manualmente los archivos de audio de referencia en este directorio para usarlos con el modo de clonación de voz a través de la API.
 
 ## Limpieza
 

@@ -51,10 +51,6 @@ matplotlib==3.7.5             # For visualization
 huggingface_hub               # For model hub integration
 pydantic-settings>=2.0.0      # Settings management
 
-# --- ONNX (for export/inference) ---
-# onnx>=1.14.0
-# onnxruntime>=1.16.0
-
 # ============================================================================
 # INSTALLATION NOTES:
 # 
